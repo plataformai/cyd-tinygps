@@ -1,0 +1,24 @@
+kind = "mobile"
+previewPath = "/"
+title = "BeeLine Navigator"
+description = "Companion Android app and ESP32 firmware for arrow-based navigation. The Android app receives Google Maps navigation notifications and forwards turn instructions to an ESP32 over Bluetooth Low Energy."
+version = "1.0.0"
+id = "artifacts/beeline-navigator"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/" ]
+localPort = 24189
+
+[services.development]
+run = "pnpm --filter @workspace/beeline-navigator run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/beeline-navigator", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/beeline-navigator", "run", "serve" ]
+
+[services.env]
+PORT = "24189"
+BASE_PATH = "/"
