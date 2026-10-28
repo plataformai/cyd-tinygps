@@ -28,8 +28,14 @@ static constexpr uint16_t COLOR_SURFACE = 0x1A2C;
 static constexpr uint16_t COLOR_AMBER = 0xF6A8;
 static constexpr uint16_t COLOR_TEXT = 0xFFFF;
 static constexpr uint16_t COLOR_MUTED = 0x9DB1;
+static constexpr uint16_t COLOR_GREEN = 0x36E6;
+static constexpr uint16_t COLOR_YELLOW = 0xF7E0;
+static constexpr uint16_t COLOR_RED = 0xF986;
 
 TFT_eSPI display = TFT_eSPI();
+float currentSpeedKmh = 0.0f;
+bool speedAvailable = false;
+unsigned long lastSpeedUpdateMs = 0;
 
 struct NavigationInstruction {
   String maneuver;
@@ -53,15 +59,15 @@ void drawArrow(const String& maneuver) {
   const float perpX = -dirY;
   const float perpY = dirX;
   const float centerX = display.width() * 0.5f;
-  const float centerY = 111.0f;
-  const float tipX = centerX + dirX * 75.0f;
-  const float tipY = centerY + dirY * 75.0f;
-  const float neckX = tipX - dirX * 24.0f;
-  const float neckY = tipY - dirY * 24.0f;
-  const float baseX = centerX - dirX * 24.0f;
-  const float baseY = centerY - dirY * 24.0f;
+  const float centerY = 81.0f;
+  const float tipX = centerX + dirX * 53.0f;
+  const float tipY = centerY + dirY * 53.0f;
+  const float neckX = tipX - dirX * 17.0f;
+  const float neckY = tipY - dirY * 17.0f;
+  const float baseX = centerX - dirX * 17.0f;
+  const float baseY = centerY - dirY * 17.0f;
   const float shaftHalfWidth = 7.0f;
-  const float headHalfWidth = 24.0f;
+  const float headHalfWidth = 18.0f;
 
   display.fillTriangle(
       baseX + perpX * shaftHalfWidth, baseY + perpY * shaftHalfWidth,
@@ -80,6 +86,50 @@ void drawArrow(const String& maneuver) {
       COLOR_AMBER);
 }
 
+void drawSpeedPanel() {
+  const int16_t width = display.width();
+  const int16_t panelTop = 193;
+  const int16_t scaleX = 96;
+  const int16_t scaleWidth = width - scaleX - 12;
+  const int16_t barY = 207;
+  const int16_t barHeight = 10;
+
+  display.fillRect(0, panelTop, width, display.height() - panelTop, COLOR_BACKGROUND);
+  display.drawFastHLine(12, panelTop, width - 24, COLOR_SURFACE);
+
+  display.setTextDatum(TL_DATUM);
+  display.setTextColor(COLOR_MUTED, COLOR_BACKGROUND);
+  display.drawString("VELOCIDADE", 13, 196, 1);
+  display.setTextColor(speedAvailable ? COLOR_TEXT : COLOR_MUTED, COLOR_BACKGROUND);
+  display.drawString(speedAvailable ? String(static_cast<int>(roundf(currentSpeedKmh))) : "--",
+                     13, 204, 4);
+  display.setTextColor(COLOR_MUTED, COLOR_BACKGROUND);
+  display.drawString("km/h", 15, 232, 1);
+
+  const int16_t mark50 = scaleX + static_cast<int16_t>(scaleWidth * 50.0f / 140.0f);
+  const int16_t mark100 = scaleX + static_cast<int16_t>(scaleWidth * 100.0f / 140.0f);
+  display.fillRect(scaleX, barY, mark50 - scaleX, barHeight, COLOR_GREEN);
+  display.fillRect(mark50, barY, mark100 - mark50, barHeight, COLOR_YELLOW);
+  display.fillRect(mark100, barY, scaleX + scaleWidth - mark100, barHeight, COLOR_RED);
+
+  const uint16_t graduations[] = {0, 20, 40, 50, 60, 80, 100, 120, 140};
+  for (const uint16_t value : graduations) {
+    const int16_t x = scaleX + static_cast<int16_t>(scaleWidth * value / 140.0f);
+    const bool special = value == 50 || value == 100;
+    display.drawFastVLine(x, barY - (special ? 7 : 4), barHeight + (special ? 14 : 8),
+                          special ? COLOR_TEXT : COLOR_MUTED);
+    display.setTextDatum(TC_DATUM);
+    display.setTextColor(special ? COLOR_TEXT : COLOR_MUTED, COLOR_BACKGROUND);
+    display.drawString(String(value), x, 222, 1);
+  }
+
+  if (speedAvailable) {
+    const float boundedSpeed = constrain(currentSpeedKmh, 0.0f, 140.0f);
+    const int16_t markerX = scaleX + static_cast<int16_t>(scaleWidth * boundedSpeed / 140.0f);
+    display.drawFastVLine(markerX, barY - 8, barHeight + 16, COLOR_TEXT);
+  }
+}
+
 void drawIdleScreen() {
   display.fillScreen(COLOR_BACKGROUND);
   display.setTextDatum(TC_DATUM);
@@ -90,25 +140,27 @@ void drawIdleScreen() {
   display.drawRoundRect(28, 139, display.width() - 56, 51, 12, COLOR_SURFACE);
   display.setTextColor(COLOR_TEXT, COLOR_BACKGROUND);
   display.drawCentreString("Conecte pelo app Android", display.width() / 2, 157, 2);
+  drawSpeedPanel();
 }
 
 void renderInstruction(const NavigationInstruction& instruction) {
   display.fillScreen(COLOR_BACKGROUND);
   display.setTextDatum(TC_DATUM);
   display.setTextColor(COLOR_MUTED, COLOR_BACKGROUND);
-  display.drawString("PROXIMA DIRECAO", display.width() / 2, 12, 2);
+  display.drawString("PROXIMA DIRECAO", display.width() / 2, 5, 2);
   drawArrow(instruction.maneuver);
 
   display.setTextDatum(MC_DATUM);
   display.setTextColor(COLOR_TEXT, COLOR_BACKGROUND);
   display.drawString(String(instruction.distanceMeters) + " m",
-                     display.width() / 2, 195, 4);
+                     display.width() / 2, 137, 4);
   if (instruction.road.length() > 0) {
     display.setTextColor(COLOR_MUTED, COLOR_BACKGROUND);
     String road = instruction.road;
     if (road.length() > 27) road = road.substring(0, 24) + "...";
-    display.drawString(road, display.width() / 2, 226, 2);
+    display.drawString(road, display.width() / 2, 171, 2);
   }
+  drawSpeedPanel();
 
   Serial.printf("TURN=%s | DISTANCE=%um | ROAD=%s\n",
                 instruction.maneuver.c_str(),
@@ -132,6 +184,22 @@ class CommandCallbacks final : public NimBLECharacteristicCallbacks {
     }
 
     const char* type = document["type"] | "";
+    if (strcmp(type, "speed") == 0) {
+      const bool valid = document["valid"] | false;
+      const float speedKmh = document["speedKmh"] | -1.0f;
+      if (valid && isfinite(speedKmh) && speedKmh >= 0.0f) {
+        currentSpeedKmh = speedKmh;
+        speedAvailable = true;
+        lastSpeedUpdateMs = millis();
+        Serial.printf("SPEED=%.1f km/h\n", currentSpeedKmh);
+      } else {
+        speedAvailable = false;
+        Serial.println("SPEED=unavailable");
+      }
+      drawSpeedPanel();
+      return;
+    }
+
     const char* maneuver = document["maneuver"] | "";
     if (strcmp(type, "navigation") != 0 || strlen(maneuver) == 0) {
       Serial.println("Ignored command with missing type or maneuver");
@@ -167,6 +235,7 @@ void setup() {
   drawIdleScreen();
 
   NimBLEDevice::init(DEVICE_NAME);
+  NimBLEDevice::setMTU(247);
   NimBLEServer* server = NimBLEDevice::createServer();
   server->setCallbacks(new ServerCallbacks());
 
@@ -184,5 +253,10 @@ void setup() {
 }
 
 void loop() {
+  if (speedAvailable && millis() - lastSpeedUpdateMs > 8000) {
+    speedAvailable = false;
+    drawSpeedPanel();
+    Serial.println("SPEED=stale");
+  }
   delay(100);
 }

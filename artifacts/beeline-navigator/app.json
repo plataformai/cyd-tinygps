@@ -19,6 +19,15 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Permita que o BeeLine use a localização para calcular sua velocidade.",
+          "locationAlwaysAndWhenInUsePermission": "Permita que o BeeLine atualize a velocidade durante a navegação, mesmo quando o Google Maps estiver aberto.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ],
       "./plugins/with-beeline-android"
     ],
     "experiments": {

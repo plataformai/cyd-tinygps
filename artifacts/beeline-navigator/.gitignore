@@ -12,6 +12,9 @@ expo-env.d.ts
 # Native
 ios/
 android/
+# Keep the local Expo module's Android implementation; only the generated app project is ignored.
+!modules/beeline-android/android/
+!modules/beeline-android/android/**
 *.orig.*
 *.jks
 *.p8

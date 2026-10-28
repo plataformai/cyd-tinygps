@@ -9,7 +9,6 @@ module.exports = function withBeeLineAndroid(config) {
       ['android.permission.BLUETOOTH_ADMIN', { 'android:maxSdkVersion': '30' }],
       ['android.permission.BLUETOOTH_SCAN', {}],
       ['android.permission.BLUETOOTH_CONNECT', {}],
-      ['android.permission.ACCESS_FINE_LOCATION', { 'android:maxSdkVersion': '30' }],
     ];
     for (const [name, attributes] of required) {
       const existing = permissions.find((permission) => permission.$['android:name'] === name);

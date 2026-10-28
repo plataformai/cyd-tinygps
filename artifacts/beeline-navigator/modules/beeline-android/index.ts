@@ -6,6 +6,7 @@ export type MapsNotification = {
   text: string;
   bigText: string;
   subText: string;
+  textLines?: string;
   postedAt: number;
 };
 

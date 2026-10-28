@@ -14,9 +14,12 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Location from 'expo-location';
 import { useColors } from '@/hooks/useColors';
 import { BeeLineAndroid } from '@/modules/beeline-android';
 import { diagnosticTurn, makeNavigationCommand, parseMapsInstruction, type Turn } from '@/lib/navigation';
+import { makeSpeedCommand } from '@/lib/speed';
+import { SPEED_TASK_NAME } from '@/lib/speed-task';
 
 function turnIcon(maneuver: Turn['maneuver']) {
   const icons: Record<Turn['maneuver'], keyof typeof MaterialCommunityIcons.glyphMap> = {
@@ -40,8 +43,12 @@ export default function HomeScreen() {
   const [notificationStatus, setNotificationStatus] = useState('Aguardando instrução compatível do Maps.');
   const [operationError, setOperationError] = useState('');
   const [sendingTest, setSendingTest] = useState(false);
+  const [speedKmh, setSpeedKmh] = useState<number | null>(null);
+  const [speedTracking, setSpeedTracking] = useState(false);
+  const [speedError, setSpeedError] = useState('');
   const lastNotificationRef = useRef('');
   const sentInstructionRef = useRef('');
+  const lastSpeedFixAtRef = useRef(0);
   const isConnected = connectionState === 'connected';
   const message = makeNavigationCommand(diagnosticTurn, 1761600000000);
 
@@ -108,6 +115,138 @@ export default function HomeScreen() {
         setOperationError(error instanceof Error ? error.message : 'Falha ao enviar instrução BLE.');
       });
   }, [isConnected, liveTurn]);
+
+  useEffect(() => {
+    let mounted = true;
+    if (Platform.OS !== 'android') return () => { mounted = false; };
+
+    Location.hasStartedLocationUpdatesAsync(SPEED_TASK_NAME)
+      .then((started) => {
+        if (mounted) setSpeedTracking(started);
+      })
+      .catch(() => undefined);
+
+    let subscription: Location.LocationSubscription | undefined;
+    if (speedTracking) {
+      const staleCheck = setInterval(() => {
+        if (Date.now() - lastSpeedFixAtRef.current > 10_000) setSpeedKmh(null);
+      }, 1000);
+      Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.High, timeInterval: 1000, distanceInterval: 0 },
+        (location) => {
+          const fresh = Date.now() - location.timestamp <= 10_000;
+          const metersPerSecond = location.coords.speed;
+          const valid = fresh && metersPerSecond !== null && metersPerSecond >= 0;
+          lastSpeedFixAtRef.current = valid ? location.timestamp : 0;
+          setSpeedKmh(valid ? metersPerSecond * 3.6 : null);
+        },
+      ).then((watcher) => {
+        if (mounted) subscription = watcher;
+        else watcher.remove();
+      }).catch((error: unknown) => {
+        setSpeedError(error instanceof Error ? error.message : 'Não foi possível ler a velocidade do GPS.');
+      });
+      return () => {
+        mounted = false;
+        clearInterval(staleCheck);
+        subscription?.remove();
+      };
+    }
+
+    return () => {
+      mounted = false;
+      subscription?.remove();
+    };
+  }, [speedTracking]);
+
+  const toggleSpeedTracking = async () => {
+    if (Platform.OS !== 'android' || !BeeLineAndroid.available) {
+      setSpeedError('A captura GPS e o envio BLE precisam de uma build nativa Android.');
+      return;
+    }
+    setSpeedError('');
+    try {
+      if (speedTracking) {
+        if (await Location.hasStartedLocationUpdatesAsync(SPEED_TASK_NAME)) {
+          await Location.stopLocationUpdatesAsync(SPEED_TASK_NAME);
+        }
+        setSpeedTracking(false);
+        setSpeedKmh(null);
+        lastSpeedFixAtRef.current = 0;
+        await BeeLineAndroid.writeCommand(makeSpeedCommand(null));
+        return;
+      }
+      if (!isConnected) {
+        setSpeedError('Conecte ao BeeLine-ESP32 antes de ativar a transmissão de velocidade.');
+        return;
+      }
+
+      const foreground = await Location.requestForegroundPermissionsAsync();
+      if (!foreground.granted) {
+        setSpeedError('Permita o acesso à localização durante o uso para ler a velocidade.');
+        if (!foreground.canAskAgain) {
+          Alert.alert(
+            'Localização bloqueada',
+            'Habilite a permissão de localização nas configurações do BeeLine.',
+            [
+              { text: 'Agora não', style: 'cancel' },
+              { text: 'Abrir configurações', onPress: () => Linking.openSettings().catch(() => undefined) },
+            ],
+          );
+        }
+        return;
+      }
+
+      const background = await Location.requestBackgroundPermissionsAsync();
+      if (!background.granted) {
+        Alert.alert(
+          'Permissão de localização necessária',
+          'Para manter a velocidade atualizada enquanto o Google Maps estiver aberto, permita localização em segundo plano nas configurações do Android.',
+          [
+            { text: 'Agora não', style: 'cancel' },
+            { text: 'Abrir configurações', onPress: () => Linking.openSettings().catch(() => undefined) },
+          ],
+        );
+        setSpeedError('A localização em segundo plano não foi autorizada.');
+        return;
+      }
+
+      if (Number(Platform.Version) >= 33) {
+        const notificationPermission = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+        );
+        if (notificationPermission !== PermissionsAndroid.RESULTS.GRANTED) {
+          setSpeedError('Permita notificações para o Android manter o serviço GPS visível.');
+          Alert.alert(
+            'Notificação necessária',
+            'Permita as notificações do BeeLine para manter visível o serviço de localização em segundo plano.',
+            [
+              { text: 'Agora não', style: 'cancel' },
+              { text: 'Abrir configurações', onPress: () => Linking.openSettings().catch(() => undefined) },
+            ],
+          );
+          return;
+        }
+      }
+
+      const alreadyStarted = await Location.hasStartedLocationUpdatesAsync(SPEED_TASK_NAME);
+      if (!alreadyStarted) {
+        await Location.startLocationUpdatesAsync(SPEED_TASK_NAME, {
+          accuracy: Location.Accuracy.High,
+          timeInterval: 1000,
+          distanceInterval: 0,
+          foregroundService: {
+            notificationTitle: 'BeeLine atualizando velocidade',
+            notificationBody: 'A velocidade GPS está sendo enviada à sua placa.',
+            killServiceOnDestroy: false,
+          },
+        });
+      }
+      setSpeedTracking(true);
+    } catch (error) {
+      setSpeedError(error instanceof Error ? error.message : 'Não foi possível iniciar a captura de velocidade.');
+    }
+  };
 
   const showNotificationSteps = async () => {
     if (!BeeLineAndroid.available) {
@@ -345,6 +484,38 @@ export default function HomeScreen() {
           <Feather name="send" size={17} color={colors.mutedForeground} />
         </Pressable>
 
+        <View style={[styles.speedCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.speedReadout}>
+            <View>
+              <Text style={[styles.cardEyebrow, { color: colors.mutedForeground }]}>VELOCIDADE GPS</Text>
+              <Text style={[styles.speedValue, { color: colors.foreground }]}>
+                {speedKmh === null ? '—' : Math.round(speedKmh)}
+                <Text style={[styles.speedUnit, { color: colors.mutedForeground }]}> km/h</Text>
+              </Text>
+            </View>
+            <Feather name="activity" size={22} color={speedTracking ? colors.accent : colors.mutedForeground} />
+          </View>
+          <Text style={[styles.speedStatus, { color: speedError ? colors.destructive : colors.mutedForeground }]}>
+            {speedError || (speedTracking
+              ? 'GPS ativo; transmissão contínua para a placa.'
+              : 'Ative para enviar a velocidade enquanto navega.')}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => void toggleSpeedTracking()}
+            style={({ pressed }) => [
+              styles.speedAction,
+              { backgroundColor: colors.accent, opacity: pressed ? 0.76 : 1 },
+            ]}
+            testID="speed-tracking-toggle"
+          >
+            <Feather name={speedTracking ? 'pause' : 'map-pin'} size={15} color={colors.accentForeground} />
+            <Text style={[styles.primaryActionText, { color: colors.accentForeground }]}>
+              {speedTracking ? 'Parar velocidade GPS' : 'Ativar velocidade GPS'}
+            </Text>
+          </Pressable>
+        </View>
+
         <Pressable
           accessibilityRole="button"
           onPress={() => setShowProtocol((visible) => !visible)}
@@ -439,6 +610,12 @@ const styles = StyleSheet.create({
   setupTitle: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
   setupDetail: { fontSize: 11, lineHeight: 15, fontFamily: 'Inter_400Regular' },
   protocolToggle: { marginTop: 8 },
+  speedCard: { borderWidth: 1, borderRadius: 17, padding: 14, marginTop: 8 },
+  speedReadout: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  speedValue: { fontSize: 29, lineHeight: 35, fontFamily: 'Inter_700Bold', letterSpacing: -0.7, marginTop: 3 },
+  speedUnit: { fontSize: 13, fontFamily: 'Inter_500Medium', letterSpacing: 0 },
+  speedStatus: { fontSize: 11, lineHeight: 16, fontFamily: 'Inter_400Regular', marginTop: 6 },
+  speedAction: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 12, minHeight: 42, paddingHorizontal: 12, marginTop: 11 },
   protocolCard: { borderRadius: 15, padding: 14, marginTop: 8 },
   protocolLabel: { fontSize: 9, fontFamily: 'Inter_700Bold', letterSpacing: 1.1, marginBottom: 9 },
   code: { fontSize: 11, lineHeight: 17, fontFamily: 'monospace' },
