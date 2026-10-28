@@ -1,9 +1,11 @@
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  AppState,
   Linking,
+  PermissionsAndroid,
   Platform,
   Pressable,
   ScrollView,
@@ -13,19 +15,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
-
-type Turn = {
-  maneuver: 'straight' | 'slight_left' | 'left' | 'slight_right' | 'right' | 'uturn';
-  label: string;
-  distanceMeters: number;
-  road: string;
-};
-
-const sampleTurns: Turn[] = [
-  { maneuver: 'straight', label: 'Siga em frente', distanceMeters: 120, road: 'Av. Paulista' },
-  { maneuver: 'slight_right', label: 'Vire levemente à direita', distanceMeters: 350, road: 'Rua Haddock Lobo' },
-  { maneuver: 'left', label: 'Vire à esquerda', distanceMeters: 80, road: 'Al. Santos' },
-];
+import { BeeLineAndroid } from '@/modules/beeline-android';
+import { diagnosticTurn, makeNavigationCommand, parseMapsInstruction, type Turn } from '@/lib/navigation';
 
 function turnIcon(maneuver: Turn['maneuver']) {
   const icons: Record<Turn['maneuver'], keyof typeof MaterialCommunityIcons.glyphMap> = {
@@ -41,33 +32,153 @@ function turnIcon(maneuver: Turn['maneuver']) {
 
 export default function HomeScreen() {
   const colors = useColors();
-  const [turnIndex, setTurnIndex] = useState(0);
   const [showProtocol, setShowProtocol] = useState(false);
-  const turn = sampleTurns[turnIndex];
-  const message = JSON.stringify({
-    type: 'navigation',
-    maneuver: turn.maneuver,
-    distanceMeters: turn.distanceMeters,
-    road: turn.road,
-    timestamp: 1761600000000,
-  });
+  const [connectionState, setConnectionState] = useState('disconnected');
+  const [connectionMessage, setConnectionMessage] = useState('Desconectado');
+  const [notificationEnabled, setNotificationEnabled] = useState(false);
+  const [liveTurn, setLiveTurn] = useState<Turn | null>(null);
+  const [notificationStatus, setNotificationStatus] = useState('Aguardando instrução compatível do Maps.');
+  const [operationError, setOperationError] = useState('');
+  const [sendingTest, setSendingTest] = useState(false);
+  const lastNotificationRef = useRef('');
+  const sentInstructionRef = useRef('');
+  const isConnected = connectionState === 'connected';
+  const message = makeNavigationCommand(diagnosticTurn, 1761600000000);
 
-  const showNotificationSteps = () => {
+  const refreshNotifications = useCallback(async () => {
+    if (!BeeLineAndroid.available) return;
+    try {
+      const enabled = await BeeLineAndroid.isNotificationAccessEnabled();
+      setNotificationEnabled(enabled);
+      if (!enabled) {
+        setLiveTurn(null);
+        setNotificationStatus('Ative o acesso às notificações para receber instruções.');
+        return;
+      }
+      const notification = await BeeLineAndroid.getLatestNotification();
+      if (!notification) {
+        lastNotificationRef.current = '';
+        setLiveTurn(null);
+        setNotificationStatus('Aguardando instrução compatível do Maps.');
+        return;
+      }
+      const key = `${notification.postedAt}:${notification.title}:${notification.text}:${notification.bigText}`;
+      if (key === lastNotificationRef.current) return;
+      lastNotificationRef.current = key;
+      const parsed = parseMapsInstruction(notification);
+      setLiveTurn(parsed);
+      setNotificationStatus(parsed
+        ? `Instrução recebida do Maps às ${new Date(notification.postedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`
+        : 'O Maps publicou uma notificação sem manobra compatível.');
+    } catch (error) {
+      setOperationError(error instanceof Error ? error.message : 'Falha ao ler notificações do Android.');
+    }
+  }, []);
+
+  useEffect(() => {
+    const subscription = BeeLineAndroid.available
+      ? BeeLineAndroid.addConnectionListener((event) => {
+          setConnectionState(event.state);
+          setConnectionMessage(event.message);
+          if (event.state === 'error') setOperationError(event.message);
+          else setOperationError('');
+        })
+      : undefined;
+    void refreshNotifications();
+    const interval = setInterval(() => void refreshNotifications(), 1500);
+    const appStateSubscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void refreshNotifications();
+    });
+    return () => {
+      clearInterval(interval);
+      appStateSubscription.remove();
+      subscription?.remove();
+    };
+  }, [refreshNotifications]);
+
+  useEffect(() => {
+    if (!isConnected || !liveTurn || !BeeLineAndroid.available) return;
+    const key = `${liveTurn.maneuver}:${liveTurn.distanceMeters}:${liveTurn.road}`;
+    if (sentInstructionRef.current === key) return;
+    sentInstructionRef.current = key;
+    BeeLineAndroid.writeCommand(makeNavigationCommand(liveTurn))
+      .then(() => setNotificationStatus('Instrução do Maps enviada ao ESP32.'))
+      .catch((error: unknown) => {
+        sentInstructionRef.current = '';
+        setOperationError(error instanceof Error ? error.message : 'Falha ao enviar instrução BLE.');
+      });
+  }, [isConnected, liveTurn]);
+
+  const showNotificationSteps = async () => {
+    if (!BeeLineAndroid.available) {
+      Alert.alert('Build Android necessária', 'O acesso às notificações requer o app Android nativo. Expo Go e o preview web não incluem esse serviço.');
+      return;
+    }
+    if (notificationEnabled) {
+      Alert.alert('Acesso ativo', 'BeeLine pode ler o texto das notificações publicadas pelo Maps. O Android não expõe dados internos da rota.');
+      return;
+    }
     Alert.alert(
-      'Acesso às notificações',
-      'No Android, abra Configurações → Acesso a notificações e permita o BeeLine Navigator. O Maps precisa estar navegando para publicar as instruções.',
+      'Permita o acesso às notificações',
+      'O Android solicitará autorização especial para o BeeLine. O listener lê apenas o texto publicado nas notificações do Google Maps; não acessa dados privados nem a rota interna.',
       [
-        { text: 'Entendi', style: 'cancel' },
-        ...(Platform.OS !== 'web'
-          ? [{ text: 'Configurações do app', onPress: () => Linking.openSettings().catch(() => undefined) }]
-          : []),
+        { text: 'Agora não', style: 'cancel' },
+        {
+          text: 'Abrir ajustes',
+          onPress: async () => {
+            try {
+              await BeeLineAndroid.openNotificationAccessSettings();
+            } catch (error) {
+              setOperationError(error instanceof Error ? error.message : 'Não foi possível abrir os ajustes.');
+            }
+          },
+        },
       ],
     );
   };
 
-  const advanceTurn = async (step: number) => {
-    await Haptics.selectionAsync();
-    setTurnIndex((current) => (current + step + sampleTurns.length) % sampleTurns.length);
+  const connectDevice = async () => {
+    if (!BeeLineAndroid.available) {
+      Alert.alert('Build Android necessária', 'A conexão BLE requer uma build nativa Android com o módulo BeeLine. Não funciona no preview web ou Expo Go.');
+      return;
+    }
+    setOperationError('');
+    try {
+      const permissions = Number(Platform.Version) >= 31
+        ? [PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN, PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT]
+        : [PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION];
+      const result = await PermissionsAndroid.requestMultiple(permissions);
+      if (permissions.some((permission) => result[permission] !== PermissionsAndroid.RESULTS.GRANTED)) {
+        setOperationError('Permissão Bluetooth negada. Conceda a permissão e tente novamente.');
+        Alert.alert('Permissão necessária', 'Permita Bluetooth (e localização em Android 11 ou anterior) nas permissões do app.', [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Abrir ajustes', onPress: () => Linking.openSettings().catch(() => undefined) },
+        ]);
+        return;
+      }
+      await Haptics.selectionAsync();
+      await BeeLineAndroid.scanAndConnect();
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : 'Falha ao conectar ao ESP32.';
+      setOperationError(detail);
+    }
+  };
+
+  const sendDiagnostic = async () => {
+    if (!isConnected || !BeeLineAndroid.available) {
+      setOperationError('Conecte ao BeeLine-ESP32 antes de enviar a instrução de teste.');
+      return;
+    }
+    setSendingTest(true);
+    setOperationError('');
+    try {
+      await BeeLineAndroid.writeCommand(makeNavigationCommand(diagnosticTurn));
+      setNotificationStatus('Instrução de teste enviada; confira seta, distância e via no TFT.');
+    } catch (error) {
+      setOperationError(error instanceof Error ? error.message : 'Falha ao enviar instrução de teste.');
+    } finally {
+      setSendingTest(false);
+    }
   };
 
   return (
@@ -89,7 +200,9 @@ export default function HomeScreen() {
           </View>
           <View style={[styles.previewPill, { backgroundColor: colors.accent }]}>
             <View style={[styles.statusDot, { backgroundColor: colors.primary }]} />
-            <Text style={[styles.previewText, { color: colors.accentForeground }]}>PRÉVIA</Text>
+            <Text style={[styles.previewText, { color: colors.accentForeground }]}>
+              {BeeLineAndroid.available ? 'ANDROID' : 'BUILD NATIVA'}
+            </Text>
           </View>
         </View>
 
@@ -108,66 +221,86 @@ export default function HomeScreen() {
             </View>
             <View style={styles.connectionCopy}>
               <Text style={[styles.cardEyebrow, { color: colors.mutedForeground }]}>DISPOSITIVO</Text>
-              <Text style={[styles.connectionTitle, { color: colors.foreground }]}>ESP32 não conectado</Text>
+              <Text style={[styles.connectionTitle, { color: colors.foreground }]}>{connectionMessage}</Text>
             </View>
-            <View style={[styles.offlinePill, { backgroundColor: colors.secondary }]}>
-              <Text style={[styles.offlineText, { color: colors.mutedForeground }]}>OFFLINE</Text>
+            <View style={[styles.offlinePill, { backgroundColor: isConnected ? colors.accent : colors.secondary }]}>
+              <Text style={[styles.offlineText, { color: isConnected ? colors.accentForeground : colors.mutedForeground }]}>
+                {isConnected ? 'CONECTADO' : connectionState === 'searching' || connectionState === 'connecting' ? 'BUSCANDO' : 'OFFLINE'}
+              </Text>
             </View>
           </View>
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <Text style={[styles.helperText, { color: colors.mutedForeground }]}>
-            A conexão BLE Android ainda precisa ser integrada. O preview web não acessa o Bluetooth do telefone.
+            {BeeLineAndroid.available
+              ? 'BLE ativo. Mantenha a placa ligada e próxima do telefone.'
+              : 'O preview web não acessa Bluetooth. Use uma build nativa Android, não o Expo Go.'}
           </Text>
+          <Pressable
+            accessibilityRole="button"
+            disabled={connectionState === 'searching' || connectionState === 'connecting'}
+            onPress={() => {
+              if (isConnected) {
+                void BeeLineAndroid.disconnect();
+              } else {
+                void connectDevice();
+              }
+            }}
+            style={({ pressed }) => [
+              styles.primaryAction,
+              { backgroundColor: colors.accent, opacity: pressed ? 0.75 : 1 },
+            ]}
+            testID="ble-connect"
+          >
+            <Feather name={isConnected ? 'bluetooth' : 'search'} size={16} color={colors.accentForeground} />
+            <Text style={[styles.primaryActionText, { color: colors.accentForeground }]}>
+              {isConnected ? 'Desconectar ESP32' : connectionState === 'searching' || connectionState === 'connecting' ? 'Procurando BeeLine…' : 'Conectar BeeLine-ESP32'}
+            </Text>
+          </Pressable>
+          {operationError ? (
+            <Text accessibilityRole="alert" style={[styles.errorText, { color: colors.destructive }]}>{operationError}</Text>
+          ) : null}
         </View>
 
         <View style={styles.turnHeader}>
           <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>PRÓXIMA INSTRUÇÃO</Text>
           <View style={[styles.examplePill, { borderColor: colors.border }]}>
-            <Text style={[styles.exampleText, { color: colors.mutedForeground }]}>EXEMPLO</Text>
+            <Text style={[styles.exampleText, { color: colors.mutedForeground }]}>{liveTurn ? 'MAPS' : 'AGUARDANDO'}</Text>
           </View>
         </View>
 
         <View style={[styles.turnCard, { backgroundColor: colors.foreground }]}>
-          <View style={styles.turnTopLine}>
-            <View style={styles.turnInstruction}>
-              <MaterialCommunityIcons name={turnIcon(turn.maneuver)} size={40} color={colors.primary} />
-              <Text style={[styles.turnLabel, { color: colors.card }]}>{turn.label}</Text>
+          {liveTurn ? (
+            <>
+              <View style={styles.turnTopLine}>
+                <View style={styles.turnInstruction}>
+                  <MaterialCommunityIcons name={turnIcon(liveTurn.maneuver)} size={40} color={colors.primary} />
+                  <Text style={[styles.turnLabel, { color: colors.card }]}>{liveTurn.label}</Text>
+                </View>
+                <View style={styles.distanceBlock}>
+                  <Text style={[styles.distance, { color: colors.card }]}>{liveTurn.distanceMeters || '—'}</Text>
+                  <Text style={[styles.distanceUnit, { color: colors.mutedForeground }]}>METROS</Text>
+                </View>
+              </View>
+              <View style={[styles.roadRow, { borderTopColor: 'rgba(255,255,255,0.14)' }]}>
+                <Feather name="corner-up-right" size={15} color={colors.primary} />
+                <Text style={[styles.roadText, { color: colors.card }]}>{liveTurn.road || 'Via não informada'}</Text>
+              </View>
+            </>
+          ) : (
+            <View style={styles.emptyInstruction}>
+              <MaterialCommunityIcons name="map-marker-path" size={34} color={colors.primary} />
+              <Text style={[styles.turnLabel, { color: colors.card }]}>Inicie uma rota no Google Maps</Text>
+              <Text style={[styles.emptyHint, { color: colors.mutedForeground }]}>A próxima manobra compatível aparecerá aqui.</Text>
             </View>
-            <View style={styles.distanceBlock}>
-              <Text style={[styles.distance, { color: colors.card }]}>{turn.distanceMeters}</Text>
-              <Text style={[styles.distanceUnit, { color: colors.mutedForeground }]}>METROS</Text>
-            </View>
-          </View>
-          <View style={[styles.roadRow, { borderTopColor: 'rgba(255,255,255,0.14)' }]}>
-            <Feather name="corner-up-right" size={15} color={colors.primary} />
-            <Text style={[styles.roadText, { color: colors.card }]}>{turn.road}</Text>
-            <View style={styles.turnControls}>
-              <Pressable
-                accessibilityLabel="Instrução anterior"
-                onPress={() => advanceTurn(-1)}
-                style={({ pressed }) => [styles.controlButton, { opacity: pressed ? 0.55 : 1 }]}
-                testID="previous-turn"
-              >
-                <Feather name="chevron-left" size={18} color={colors.card} />
-              </Pressable>
-              <Pressable
-                accessibilityLabel="Próxima instrução"
-                onPress={() => advanceTurn(1)}
-                style={({ pressed }) => [styles.controlButton, { opacity: pressed ? 0.55 : 1 }]}
-                testID="next-turn"
-              >
-                <Feather name="chevron-right" size={18} color={colors.card} />
-              </Pressable>
-            </View>
-          </View>
+          )}
         </View>
         <Text style={[styles.demoNote, { color: colors.mutedForeground }]}>
-          Toque nas setas para pré-visualizar instruções. Estes dados são apenas de demonstração.
+          {notificationStatus}{!liveTurn ? ' Use “Enviar instrução de teste” para verificar a placa sem uma rota.' : ''}
         </Text>
 
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>PREPARAÇÃO</Text>
-          <Text style={[styles.progressText, { color: colors.mutedForeground }]}>1 DE 2</Text>
+          <Text style={[styles.progressText, { color: colors.mutedForeground }]}>{notificationEnabled ? '1 DE 2 · ATIVO' : '1 DE 2'}</Text>
         </View>
 
         <Pressable
@@ -184,9 +317,32 @@ export default function HomeScreen() {
           </View>
           <View style={styles.setupCopy}>
             <Text style={[styles.setupTitle, { color: colors.foreground }]}>Acesso ao Google Maps</Text>
-            <Text style={[styles.setupDetail, { color: colors.mutedForeground }]}>Ative o acesso às notificações no Android</Text>
+            <Text style={[styles.setupDetail, { color: colors.mutedForeground }]}>
+              {notificationEnabled ? 'Acesso às notificações autorizado' : 'Autorize o listener nas configurações Android'}
+            </Text>
           </View>
-          <Feather name="chevron-right" size={19} color={colors.mutedForeground} />
+          <Feather name={notificationEnabled ? 'check' : 'chevron-right'} size={19} color={colors.mutedForeground} />
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          disabled={!isConnected || sendingTest}
+          onPress={() => void sendDiagnostic()}
+          style={({ pressed }) => [
+            styles.setupRow,
+            styles.protocolToggle,
+            { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed || !isConnected ? 0.55 : 1 },
+          ]}
+          testID="send-diagnostic"
+        >
+          <View style={[styles.setupIcon, { backgroundColor: colors.accent }]}>
+            <Feather name="activity" size={18} color={colors.accentForeground} />
+          </View>
+          <View style={styles.setupCopy}>
+            <Text style={[styles.setupTitle, { color: colors.foreground }]}>Enviar instrução de teste</Text>
+            <Text style={[styles.setupDetail, { color: colors.mutedForeground }]}>350 m · direita · Rua Haddock Lobo</Text>
+          </View>
+          <Feather name="send" size={17} color={colors.mutedForeground} />
         </Pressable>
 
         <Pressable
@@ -222,7 +378,7 @@ export default function HomeScreen() {
         <View style={[styles.footer, { borderTopColor: colors.border }]}>
           <Feather name="shield" size={14} color={colors.mutedForeground} />
           <Text style={[styles.footerText, { color: colors.mutedForeground }]}>
-            A navegação real só será mostrada quando o Maps enviar uma notificação compatível.
+            O app recebe somente o conteúdo que o Android publica nas notificações do Maps. Algumas instruções podem não incluir manobra, distância ou via.
           </Text>
         </View>
       </ScrollView>
@@ -256,6 +412,9 @@ const styles = StyleSheet.create({
   offlineText: { fontSize: 9, fontFamily: 'Inter_700Bold', letterSpacing: 0.8 },
   divider: { height: 1, marginVertical: 13 },
   helperText: { fontSize: 12, lineHeight: 18, fontFamily: 'Inter_400Regular' },
+  primaryAction: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, borderRadius: 13, minHeight: 46, paddingHorizontal: 14, marginTop: 14 },
+  primaryActionText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  errorText: { fontSize: 11, lineHeight: 16, fontFamily: 'Inter_500Medium', marginTop: 10 },
   turnHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
   sectionLabel: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 1.25 },
   examplePill: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 9, paddingVertical: 4 },
@@ -263,14 +422,14 @@ const styles = StyleSheet.create({
   turnCard: { borderRadius: 22, padding: 19, paddingBottom: 0, overflow: 'hidden' },
   turnTopLine: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 98 },
   turnInstruction: { flex: 1, gap: 9, paddingRight: 8 },
+  emptyInstruction: { minHeight: 158, alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 22 },
+  emptyHint: { fontSize: 11, lineHeight: 16, fontFamily: 'Inter_400Regular', textAlign: 'center' },
   turnLabel: { fontSize: 17, lineHeight: 22, fontFamily: 'Inter_600SemiBold' },
   distanceBlock: { alignItems: 'flex-end', justifyContent: 'center' },
   distance: { fontSize: 44, lineHeight: 49, letterSpacing: -2, fontFamily: 'Inter_700Bold' },
   distanceUnit: { fontSize: 9, letterSpacing: 1.2, fontFamily: 'Inter_600SemiBold', marginTop: 1 },
   roadRow: { minHeight: 52, borderTopWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 17 },
   roadText: { flex: 1, fontSize: 12, fontFamily: 'Inter_500Medium' },
-  turnControls: { flexDirection: 'row', gap: 2 },
-  controlButton: { width: 34, height: 38, alignItems: 'center', justifyContent: 'center' },
   demoNote: { fontSize: 11, lineHeight: 16, marginTop: 8, marginBottom: 24 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 9 },
   progressText: { fontSize: 10, fontFamily: 'Inter_500Medium', letterSpacing: 0.7 },
