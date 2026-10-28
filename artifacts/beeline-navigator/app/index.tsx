@@ -97,7 +97,7 @@ export default function HomeScreen() {
           <Text style={[styles.eyebrow, { color: colors.mutedForeground }]}>NAVEGAÇÃO SEM DESVIAR O OLHAR</Text>
           <Text style={[styles.heading, { color: colors.foreground }]}>A próxima curva,{'\n'}de relance.</Text>
           <Text style={[styles.intro, { color: colors.mutedForeground }]}>
-            O Android lê a instrução do Maps e envia a direção ao seu ESP32 por Bluetooth.
+            O objetivo é levar as instruções do Maps até a seta do seu ESP32 por Bluetooth.
           </Text>
         </View>
 
@@ -116,7 +116,7 @@ export default function HomeScreen() {
           </View>
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
           <Text style={[styles.helperText, { color: colors.mutedForeground }]}>
-            O pareamento BLE estará disponível no build Android nativo. O preview web não acessa o Bluetooth do telefone.
+            A conexão BLE Android ainda precisa ser integrada. O preview web não acessa o Bluetooth do telefone.
           </Text>
         </View>
 
