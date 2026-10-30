@@ -232,6 +232,14 @@ void setup() {
   digitalWrite(TFT_BACKLIGHT_PIN, HIGH);
   display.init();
   display.setRotation(1);
+  if (display.width() < display.height()) {
+    display.setRotation(3);
+  }
+  Serial.printf("TFT orientation: %d x %d (landscape expected 320 x 240)\n",
+                display.width(), display.height());
+  if (display.width() < display.height()) {
+    Serial.println("TFT is still portrait; check the selected TFT_eSPI User_Setup.h");
+  }
   drawIdleScreen();
 
   NimBLEDevice::init(DEVICE_NAME);

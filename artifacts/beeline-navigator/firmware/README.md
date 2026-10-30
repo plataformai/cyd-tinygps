@@ -22,8 +22,9 @@ Este sketch cria um periférico BLE chamado `BeeLine-ESP32`, recebe cada instru�
    #define TFT_BACKLIGHT_ON HIGH
    ```
 
-4. Abra `beeline-esp32.ino`, selecione **ESP32 Dev Module** e envie o sketch.
-5. Abra o monitor serial em `115200` baud. O display mostra “Aguardando instrucoes” e o dispositivo anuncia `BeeLine-ESP32`.
+4. Abra `beeline-esp32.ino`, selecione **ESP32 Dev Module** e envie o sketch. O firmware configura a tela em paisagem; se a configuração da biblioteca continuar em retrato, tenta a rotação alternativa.
+5. Abra o monitor serial em `115200` baud. Confirme `TFT orientation: 320 x 240`; o display mostra “Aguardando instrucoes” e o dispositivo anuncia `BeeLine-ESP32`.
+6. Se aparecer `240 x 320` ou a mensagem de que o TFT continua em retrato, confira se `User_Setup_Select.h` seleciona o `User_Setup.h` que você editou e grave o sketch novamente.
 
 ## Contrato BLE
 
