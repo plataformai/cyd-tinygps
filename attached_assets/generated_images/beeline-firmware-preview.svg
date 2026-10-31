@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1660" height="920" viewBox="0 0 1660 920">
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#101a18" flood-opacity=".12"/>
+    </filter>
+    <style>
+      .ui { font-family: Arial, Helvetica, sans-serif; }
+      .caps { letter-spacing: 2px; }
+      .small { font-size: 12px; }
+      .muted { fill: #9CB68C; }
+      .white { fill: #FFFFFF; }
+      .amber { fill: #F7D642; }
+      .bg { fill: #102421; }
+    </style>
+  </defs>
+  <rect width="1660" height="920" fill="#EEF2EC"/>
+  <text x="60" y="65" class="ui" font-size="34" font-weight="700" fill="#14241E">BeeLine — expectativa do firmware</text>
+  <text x="60" y="101" class="ui" font-size="17" fill="#65746A">ESP32-2432S028 · TFT 320 × 240 · visualização em paisagem</text>
+
+  <g filter="url(#shadow)">
+    <rect x="50" y="135" width="750" height="710" rx="24" fill="#FFFFFF" stroke="#D8E0D6"/>
+    <rect x="850" y="135" width="760" height="710" rx="24" fill="#FFFFFF" stroke="#D8E0D6"/>
+  </g>
+
+  <text x="85" y="190" class="ui caps" font-size="13" font-weight="700" fill="#68776D">A · VERIFICAÇÃO AO LIGAR · 1,2 S</text>
+  <text x="885" y="190" class="ui caps" font-size="13" font-weight="700" fill="#68776D">B · NAVEGAÇÃO ATIVA</text>
+
+  <!-- Exact 4:3 LCD mockups, scaled 2× from the physical 320 × 240 canvas -->
+  <rect x="90" y="210" width="680" height="520" rx="20" fill="#070C0B"/>
+  <rect x="110" y="230" width="640" height="480" fill="#102421"/>
+  <g transform="translate(110 230) scale(2)" class="ui">
+    <rect x="0.5" y="0.5" width="319" height="239" fill="none" stroke="#F7D642" stroke-width="1"/>
+    <text x="160" y="86" text-anchor="middle" font-size="12" font-weight="700" class="amber">BEELINE TFT</text>
+    <text x="160" y="118" text-anchor="middle" font-size="13" font-weight="700" class="white">LANDSCAPE OK</text>
+    <text x="160" y="150" text-anchor="middle" font-size="12" class="muted">320 x 240</text>
+  </g>
+  <text x="85" y="780" class="ui" font-size="17" font-weight="700" fill="#1C2B24">Teste rápido de orientação</text>
+  <text x="85" y="808" class="ui" font-size="14" fill="#65746A">A moldura e a resolução aparecem brevemente na inicialização.</text>
+
+  <rect x="895" y="210" width="680" height="520" rx="20" fill="#070C0B"/>
+  <rect x="915" y="230" width="640" height="480" fill="#102421"/>
+  <g transform="translate(915 230) scale(2)" class="ui">
+    <text x="160" y="17" text-anchor="middle" font-size="10" font-weight="700" class="muted">PROXIMA DIRECAO</text>
+
+    <!-- Slight-right arrow, matching the firmware's navigation example -->
+    <polygon points="156,99 145,91 175,48 186,56" fill="#F7D642"/>
+    <polygon points="190,38 195,62 166,41" fill="#F7D642"/>
+
+    <text x="160" y="146" text-anchor="middle" font-size="24" font-weight="700" class="white">350 m</text>
+    <text x="160" y="176" text-anchor="middle" font-size="12" class="muted">Rua Haddock Lobo</text>
+
+    <line x1="12" y1="193" x2="308" y2="193" stroke="#184563" stroke-width="1"/>
+    <text x="13" y="204" font-size="7" font-weight="700" class="muted">VELOCIDADE</text>
+    <text x="13" y="229" font-size="22" font-weight="700" class="white">72</text>
+    <text x="15" y="239" font-size="7" class="muted">km/h</text>
+
+    <rect x="96" y="207" width="75.7" height="10" fill="#31DF31"/>
+    <rect x="171.7" y="207" width="75.7" height="10" fill="#F7FF00"/>
+    <rect x="247.4" y="207" width="60.6" height="10" fill="#FF3131"/>
+
+    <g text-anchor="middle" font-size="6">
+      <line x1="96" y1="203" x2="96" y2="221" stroke="#9CB68C" stroke-width="1"/>
+      <text x="96" y="239" class="muted">0</text>
+      <line x1="126.3" y1="203" x2="126.3" y2="221" stroke="#9CB68C" stroke-width="1"/>
+      <text x="126.3" y="239" class="muted">20</text>
+      <line x1="156.6" y1="203" x2="156.6" y2="221" stroke="#9CB68C" stroke-width="1"/>
+      <text x="156.6" y="239" class="muted">40</text>
+      <line x1="171.7" y1="200" x2="171.7" y2="224" stroke="#FFFFFF" stroke-width="1"/>
+      <text x="171.7" y="239" class="white" font-weight="700">50</text>
+      <line x1="186.9" y1="203" x2="186.9" y2="221" stroke="#9CB68C" stroke-width="1"/>
+      <text x="186.9" y="239" class="muted">60</text>
+      <line x1="217.1" y1="203" x2="217.1" y2="221" stroke="#9CB68C" stroke-width="1"/>
+      <text x="217.1" y="239" class="muted">80</text>
+      <line x1="247.4" y1="200" x2="247.4" y2="224" stroke="#FFFFFF" stroke-width="1"/>
+      <text x="247.4" y="239" class="white" font-weight="700">100</text>
+      <line x1="277.7" y1="203" x2="277.7" y2="221" stroke="#9CB68C" stroke-width="1"/>
+      <text x="277.7" y="239" class="muted">120</text>
+      <line x1="308" y1="203" x2="308" y2="221" stroke="#9CB68C" stroke-width="1"/>
+      <text x="308" y="239" class="muted">140</text>
+    </g>
+    <line x1="205" y1="199" x2="205" y2="225" stroke="#FFFFFF" stroke-width="1.5"/>
+  </g>
+  <text x="885" y="780" class="ui" font-size="17" font-weight="700" fill="#1C2B24">Estado durante uma rota</text>
+  <text x="885" y="808" class="ui" font-size="14" fill="#65746A">72 km/h é um valor ilustrativo; o marcador real vem do GPS do celular.</text>
+
+  <text x="60" y="885" class="ui" font-size="13" fill="#718077">A imagem é uma simulação estática da tela; fontes e desenho podem variar ligeiramente no TFT físico.</text>
+</svg>

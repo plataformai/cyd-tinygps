@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "Ra-3VZKAZAN2yYwhAxEfw"
+uri = "file://attached_assets/generated_images/beeline-firmware-preview.png"
+type = "image"
+title = "BeeLine — expectativa do firmware"
+description = "Mockup em paisagem das telas de inicialização e navegação no TFT 320×240. A velocidade de 72 km/h é apenas ilustrativa."
+logical_id = "48226f87-3ebb-47c0-b8e8-7b5117932c9f"
+content_hash = "sha256:18936e2890d997cec93d7426054957773033eebd0459bcdd6847eb8b825e8faa"
+size = 119952
+mtime_ms = 1793435721975
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/48226f87-3ebb-47c0-b8e8-7b5117932c9f/650a69c5-19df-4db9-b224-a9d811fbced2"
+storage_version_token = "1793435733860189"
+content_type = "image/png"
