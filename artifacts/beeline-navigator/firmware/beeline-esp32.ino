@@ -17,6 +17,8 @@
 #include <ArduinoJson.h>
 #include <NimBLEDevice.h>
 #include <TFT_eSPI.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 #include <math.h>
 
 static constexpr char DEVICE_NAME[] = "BeeLine-ESP32";
@@ -53,6 +55,17 @@ unsigned long orientationCheckStartedMs = 0;
 NavigationInstruction currentInstruction;
 char serialCommand[4] = {};
 uint8_t serialCommandLength = 0;
+SemaphoreHandle_t firmwareStateMutex = nullptr;
+
+// NimBLE callbacks and loop() run in different tasks. Keep rotation, state
+// and TFT writes serialized so a BLE update cannot interrupt a redraw.
+class FirmwareStateLock final {
+ public:
+  FirmwareStateLock() { xSemaphoreTake(firmwareStateMutex, portMAX_DELAY); }
+  ~FirmwareStateLock() { xSemaphoreGive(firmwareStateMutex); }
+  FirmwareStateLock(const FirmwareStateLock&) = delete;
+  FirmwareStateLock& operator=(const FirmwareStateLock&) = delete;
+};
 
 void drawIdleScreen();
 void renderInstruction(const NavigationInstruction& instruction);
@@ -146,7 +159,7 @@ void drawSpeedPanel() {
   }
 }
 
-void drawOrientationCheck(bool rotationTest = false) {
+void drawOrientationCheck(bool rotationTest) {
   const int16_t width = display.width();
   const int16_t height = display.height();
   const bool landscape = width == DISPLAY_LANDSCAPE_WIDTH &&
@@ -218,7 +231,8 @@ void applyDisplayRotation(uint8_t rotation, bool rotationTest) {
   display.setRotation(activeDisplayRotation);
 
   Serial.printf("[INFO] Rotacao aplicada: %u (Largura=%d Altura=%d)\n",
-                activeDisplayRotation, display.width(), display.height());
+                static_cast<unsigned int>(activeDisplayRotation),
+                display.width(), display.height());
   if (!rotationTest &&
       (display.width() != DISPLAY_LANDSCAPE_WIDTH ||
        display.height() != DISPLAY_LANDSCAPE_HEIGHT)) {
@@ -260,6 +274,7 @@ void pollSerialCommands() {
 
 class CommandCallbacks final : public NimBLECharacteristicCallbacks {
   void onWrite(NimBLECharacteristic* characteristic, NimBLEConnInfo&) override {
+    const FirmwareStateLock lock;
     const std::string raw = characteristic->getValue();
     if (raw.empty() || raw.size() > 180) {
       Serial.println("Ignored empty or oversized BLE command");
@@ -328,6 +343,12 @@ class ServerCallbacks final : public NimBLEServerCallbacks {
 
 void setup() {
   Serial.begin(115200);
+  firmwareStateMutex = xSemaphoreCreateMutex();
+  if (firmwareStateMutex == nullptr) {
+    Serial.println("[ERRO] Memoria insuficiente para sincronizar o display");
+    Serial.flush();
+    abort();
+  }
   pinMode(TFT_BACKLIGHT_PIN, OUTPUT);
   digitalWrite(TFT_BACKLIGHT_PIN, HIGH);
   display.init();
@@ -349,23 +370,27 @@ void setup() {
   advertising->addServiceUUID(SERVICE_UUID);
   advertising->start();
   Serial.printf("%s ready; waiting for Android BLE connection\n", DEVICE_NAME);
+  Serial.println("Teste de rotacao: envie r0, r1, r2 ou r3 com Nova linha.");
 }
 
 void loop() {
-  pollSerialCommands();
+  {
+    const FirmwareStateLock lock;
+    pollSerialCommands();
 
-  if (orientationCheckActive &&
-      millis() - orientationCheckStartedMs >= DISPLAY_ORIENTATION_CHECK_MS) {
-    orientationCheckActive = false;
-    drawCurrentScreen();
-  }
-
-  if (speedAvailable && millis() - lastSpeedUpdateMs > 8000) {
-    speedAvailable = false;
-    if (!orientationCheckActive) {
-      drawSpeedPanel();
+    if (orientationCheckActive &&
+        millis() - orientationCheckStartedMs >= DISPLAY_ORIENTATION_CHECK_MS) {
+      orientationCheckActive = false;
+      drawCurrentScreen();
     }
-    Serial.println("SPEED=stale");
+
+    if (speedAvailable && millis() - lastSpeedUpdateMs > 8000) {
+      speedAvailable = false;
+      if (!orientationCheckActive) {
+        drawSpeedPanel();
+      }
+      Serial.println("SPEED=stale");
+    }
   }
   yield();
 }
