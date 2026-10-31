@@ -11,8 +11,8 @@ Separar melhorias de robustez e desempenho do firmware da solução, ainda não 
 
 ## Variante física apresentada
 
-A foto fornecida pelo usuário mostra uma placa marcada ESP32-2432S028 com dois conectores: USB-C e micro-USB. Não presumir que o nome da placa garanta um controlador ILI9341. O controlador físico permanece não confirmado; ST7789 é uma hipótese fundamentada para teste, não uma identificação definitiva.
+A placa fotografada é marcada ESP32-2432S028 e possui USB-C e micro-USB. O usuário confirmou que o problema de exibição foi resolvido após aplicar o perfil recomendado para a variante de dois USB: ST7789, ordem BGR e inversão de cores desativada, mantendo os pinos ESP32 existentes.
 
-**Why:** Há variantes dessa família com controladores diferentes. O perfil comunitário [CYD2USB](https://github.com/witnessmenow/ESP32-Cheap-Yellow-Display/blob/main/DisplayConfig/CYD2USB/User_Setup.h) usa ST7789; quantidade de portas e dimensões lógicas informadas pelo firmware não identificam sozinhas o chip do painel.
+**Why:** O firmware com a configuração ILI9341 apresentava imagem cortada/espelhada nessa unidade; a confirmação do usuário valida que a configuração de driver do painel era o problema prático, não uma razão para trocar a pinagem.
 
-**How to apply:** Distinguir identificação visual, configuração compilada e resultado confirmado na placa. Usar testes controlados e reversíveis, sem apresentar otimizações ou alteração de driver ainda não testada como solução comprovada.
+**How to apply:** Para novas alterações nesta placa específica, preservar o setup que resolveu o display e não voltar ao ILI9341 nem sugerir troca de fios sem evidência nova. Isso não prova que todas as placas ESP32-2432S028 tenham o mesmo controlador.
