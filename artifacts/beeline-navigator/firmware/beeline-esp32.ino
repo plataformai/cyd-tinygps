@@ -23,6 +23,11 @@ static constexpr char DEVICE_NAME[] = "BeeLine-ESP32";
 static constexpr char SERVICE_UUID[] = "7b1e0001-6d2a-4f7a-9c21-8e8a4b12a001";
 static constexpr char COMMAND_UUID[] = "7b1e0002-6d2a-4f7a-9c21-8e8a4b12a001";
 static constexpr uint8_t TFT_BACKLIGHT_PIN = 21;
+static constexpr uint8_t DISPLAY_ROTATION_LANDSCAPE = 1;
+static constexpr uint8_t DISPLAY_ROTATION_LANDSCAPE_INVERTED = 3;
+static constexpr int16_t DISPLAY_LANDSCAPE_WIDTH = 320;
+static constexpr int16_t DISPLAY_LANDSCAPE_HEIGHT = 240;
+static constexpr uint16_t DISPLAY_ORIENTATION_CHECK_MS = 1200;
 static constexpr uint16_t COLOR_BACKGROUND = 0x1124;
 static constexpr uint16_t COLOR_SURFACE = 0x1A2C;
 static constexpr uint16_t COLOR_AMBER = 0xF6A8;
@@ -130,6 +135,25 @@ void drawSpeedPanel() {
   }
 }
 
+void drawOrientationCheck() {
+  const int16_t width = display.width();
+  const int16_t height = display.height();
+  const bool landscape = width == DISPLAY_LANDSCAPE_WIDTH &&
+                         height == DISPLAY_LANDSCAPE_HEIGHT;
+
+  display.fillScreen(COLOR_BACKGROUND);
+  display.drawRect(0, 0, width, height, COLOR_AMBER);
+  display.setTextDatum(TC_DATUM);
+  display.setTextColor(COLOR_AMBER, COLOR_BACKGROUND);
+  display.drawCentreString("BEELINE TFT", width / 2, height / 2 - 46, 2);
+  display.setTextColor(landscape ? COLOR_TEXT : COLOR_RED, COLOR_BACKGROUND);
+  display.drawCentreString(landscape ? "LANDSCAPE OK" : "CHECK TFT SETUP",
+                           width / 2, height / 2 - 14, 2);
+  display.setTextColor(COLOR_MUTED, COLOR_BACKGROUND);
+  display.drawCentreString(String(width) + " x " + String(height),
+                           width / 2, height / 2 + 18, 2);
+}
+
 void drawIdleScreen() {
   display.fillScreen(COLOR_BACKGROUND);
   display.setTextDatum(TC_DATUM);
@@ -231,15 +255,20 @@ void setup() {
   pinMode(TFT_BACKLIGHT_PIN, OUTPUT);
   digitalWrite(TFT_BACKLIGHT_PIN, HIGH);
   display.init();
-  display.setRotation(1);
-  if (display.width() < display.height()) {
-    display.setRotation(3);
+  display.setRotation(DISPLAY_ROTATION_LANDSCAPE);
+  if (display.width() != DISPLAY_LANDSCAPE_WIDTH ||
+      display.height() != DISPLAY_LANDSCAPE_HEIGHT) {
+    display.setRotation(DISPLAY_ROTATION_LANDSCAPE_INVERTED);
   }
-  Serial.printf("TFT orientation: %d x %d (landscape expected 320 x 240)\n",
+  const bool landscape = display.width() == DISPLAY_LANDSCAPE_WIDTH &&
+                         display.height() == DISPLAY_LANDSCAPE_HEIGHT;
+  Serial.printf("TFT orientation: %d x %d (expected 320 x 240)\n",
                 display.width(), display.height());
-  if (display.width() < display.height()) {
-    Serial.println("TFT is still portrait; check the selected TFT_eSPI User_Setup.h");
+  if (!landscape) {
+    Serial.println("TFT is not 320x240; check User_Setup_Select.h and the CYD pin setup");
   }
+  drawOrientationCheck();
+  delay(DISPLAY_ORIENTATION_CHECK_MS);
   drawIdleScreen();
 
   NimBLEDevice::init(DEVICE_NAME);
