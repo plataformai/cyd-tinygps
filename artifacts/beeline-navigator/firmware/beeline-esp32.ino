@@ -23,8 +23,7 @@ static constexpr char DEVICE_NAME[] = "BeeLine-ESP32";
 static constexpr char SERVICE_UUID[] = "7b1e0001-6d2a-4f7a-9c21-8e8a4b12a001";
 static constexpr char COMMAND_UUID[] = "7b1e0002-6d2a-4f7a-9c21-8e8a4b12a001";
 static constexpr uint8_t TFT_BACKLIGHT_PIN = 21;
-static constexpr uint8_t DISPLAY_ROTATION_LANDSCAPE = 1;
-static constexpr uint8_t DISPLAY_ROTATION_LANDSCAPE_INVERTED = 3;
+static constexpr uint8_t DEFAULT_DISPLAY_ROTATION = 1;
 static constexpr int16_t DISPLAY_LANDSCAPE_WIDTH = 320;
 static constexpr int16_t DISPLAY_LANDSCAPE_HEIGHT = 240;
 static constexpr uint16_t DISPLAY_ORIENTATION_CHECK_MS = 1200;
@@ -37,16 +36,28 @@ static constexpr uint16_t COLOR_GREEN = 0x36E6;
 static constexpr uint16_t COLOR_YELLOW = 0xF7E0;
 static constexpr uint16_t COLOR_RED = 0xF986;
 
-TFT_eSPI display = TFT_eSPI();
-float currentSpeedKmh = 0.0f;
-bool speedAvailable = false;
-unsigned long lastSpeedUpdateMs = 0;
-
 struct NavigationInstruction {
   String maneuver;
   String road;
   uint16_t distanceMeters;
 };
+
+TFT_eSPI display = TFT_eSPI();
+float currentSpeedKmh = 0.0f;
+bool speedAvailable = false;
+unsigned long lastSpeedUpdateMs = 0;
+uint8_t activeDisplayRotation = DEFAULT_DISPLAY_ROTATION;
+bool hasNavigationInstruction = false;
+bool orientationCheckActive = false;
+unsigned long orientationCheckStartedMs = 0;
+NavigationInstruction currentInstruction;
+char serialCommand[4] = {};
+uint8_t serialCommandLength = 0;
+
+void drawIdleScreen();
+void renderInstruction(const NavigationInstruction& instruction);
+void drawCurrentScreen();
+void applyDisplayRotation(uint8_t rotation, bool rotationTest);
 
 float maneuverAngle(const String& maneuver) {
   if (maneuver == "slight_left") return -35.0f;
@@ -135,7 +146,7 @@ void drawSpeedPanel() {
   }
 }
 
-void drawOrientationCheck() {
+void drawOrientationCheck(bool rotationTest = false) {
   const int16_t width = display.width();
   const int16_t height = display.height();
   const bool landscape = width == DISPLAY_LANDSCAPE_WIDTH &&
@@ -146,9 +157,16 @@ void drawOrientationCheck() {
   display.setTextDatum(TC_DATUM);
   display.setTextColor(COLOR_AMBER, COLOR_BACKGROUND);
   display.drawCentreString("BEELINE TFT", width / 2, height / 2 - 46, 2);
-  display.setTextColor(landscape ? COLOR_TEXT : COLOR_RED, COLOR_BACKGROUND);
-  display.drawCentreString(landscape ? "LANDSCAPE OK" : "CHECK TFT SETUP",
-                           width / 2, height / 2 - 14, 2);
+  String status;
+  if (rotationTest) {
+    status = "ROTATION r";
+    status += String(activeDisplayRotation);
+  } else {
+    status = landscape ? "LANDSCAPE OK" : "CHECK TFT SETUP";
+  }
+  display.setTextColor(rotationTest || landscape ? COLOR_TEXT : COLOR_RED,
+                       COLOR_BACKGROUND);
+  display.drawCentreString(status, width / 2, height / 2 - 14, 2);
   display.setTextColor(COLOR_MUTED, COLOR_BACKGROUND);
   display.drawCentreString(String(width) + " x " + String(height),
                            width / 2, height / 2 + 18, 2);
@@ -185,11 +203,59 @@ void renderInstruction(const NavigationInstruction& instruction) {
     display.drawString(road, display.width() / 2, 171, 2);
   }
   drawSpeedPanel();
+}
 
-  Serial.printf("TURN=%s | DISTANCE=%um | ROAD=%s\n",
-                instruction.maneuver.c_str(),
-                instruction.distanceMeters,
-                instruction.road.c_str());
+void drawCurrentScreen() {
+  if (hasNavigationInstruction) {
+    renderInstruction(currentInstruction);
+  } else {
+    drawIdleScreen();
+  }
+}
+
+void applyDisplayRotation(uint8_t rotation, bool rotationTest) {
+  activeDisplayRotation = rotation;
+  display.setRotation(activeDisplayRotation);
+
+  Serial.printf("[INFO] Rotacao aplicada: %u (Largura=%d Altura=%d)\n",
+                activeDisplayRotation, display.width(), display.height());
+  if (!rotationTest &&
+      (display.width() != DISPLAY_LANDSCAPE_WIDTH ||
+       display.height() != DISPLAY_LANDSCAPE_HEIGHT)) {
+    Serial.println("[AVISO] TFT nao esta em 320x240; confira User_Setup_Select.h e os pinos");
+  }
+
+  drawOrientationCheck(rotationTest);
+  orientationCheckActive = true;
+  orientationCheckStartedMs = millis();
+}
+
+void handleSerialCommand() {
+  if (serialCommandLength == 2 && serialCommand[0] == 'r' &&
+      serialCommand[1] >= '0' && serialCommand[1] <= '3') {
+    applyDisplayRotation(static_cast<uint8_t>(serialCommand[1] - '0'), true);
+    return;
+  }
+
+  Serial.println("Comando serial invalido. Use r0, r1, r2 ou r3.");
+}
+
+void pollSerialCommands() {
+  while (Serial.available() > 0) {
+    const char character = static_cast<char>(Serial.read());
+    if (character == '\r' || character == '\n') {
+      if (serialCommandLength > 0) {
+        serialCommand[serialCommandLength] = '\0';
+        handleSerialCommand();
+        serialCommandLength = 0;
+      }
+    } else if (serialCommandLength < sizeof(serialCommand) - 1) {
+      serialCommand[serialCommandLength++] = character;
+    } else {
+      serialCommandLength = 0;
+      Serial.println("Comando longo demais. Use r0, r1, r2 ou r3.");
+    }
+  }
 }
 
 class CommandCallbacks final : public NimBLECharacteristicCallbacks {
@@ -220,7 +286,9 @@ class CommandCallbacks final : public NimBLECharacteristicCallbacks {
         speedAvailable = false;
         Serial.println("SPEED=unavailable");
       }
-      drawSpeedPanel();
+      if (!orientationCheckActive) {
+        drawSpeedPanel();
+      }
       return;
     }
 
@@ -235,7 +303,15 @@ class CommandCallbacks final : public NimBLECharacteristicCallbacks {
     instruction.road = document["road"] | "";
     const int distance = document["distanceMeters"] | 0;
     instruction.distanceMeters = static_cast<uint16_t>(constrain(distance, 0, 65535));
-    renderInstruction(instruction);
+    currentInstruction = instruction;
+    hasNavigationInstruction = true;
+    if (!orientationCheckActive) {
+      renderInstruction(currentInstruction);
+    }
+    Serial.printf("TURN=%s | DISTANCE=%um | ROAD=%s\n",
+                  instruction.maneuver.c_str(),
+                  instruction.distanceMeters,
+                  instruction.road.c_str());
   }
 };
 
@@ -255,21 +331,7 @@ void setup() {
   pinMode(TFT_BACKLIGHT_PIN, OUTPUT);
   digitalWrite(TFT_BACKLIGHT_PIN, HIGH);
   display.init();
-  display.setRotation(DISPLAY_ROTATION_LANDSCAPE);
-  if (display.width() != DISPLAY_LANDSCAPE_WIDTH ||
-      display.height() != DISPLAY_LANDSCAPE_HEIGHT) {
-    display.setRotation(DISPLAY_ROTATION_LANDSCAPE_INVERTED);
-  }
-  const bool landscape = display.width() == DISPLAY_LANDSCAPE_WIDTH &&
-                         display.height() == DISPLAY_LANDSCAPE_HEIGHT;
-  Serial.printf("TFT orientation: %d x %d (expected 320 x 240)\n",
-                display.width(), display.height());
-  if (!landscape) {
-    Serial.println("TFT is not 320x240; check User_Setup_Select.h and the CYD pin setup");
-  }
-  drawOrientationCheck();
-  delay(DISPLAY_ORIENTATION_CHECK_MS);
-  drawIdleScreen();
+  applyDisplayRotation(DEFAULT_DISPLAY_ROTATION, false);
 
   NimBLEDevice::init(DEVICE_NAME);
   NimBLEDevice::setMTU(247);
@@ -290,10 +352,20 @@ void setup() {
 }
 
 void loop() {
+  pollSerialCommands();
+
+  if (orientationCheckActive &&
+      millis() - orientationCheckStartedMs >= DISPLAY_ORIENTATION_CHECK_MS) {
+    orientationCheckActive = false;
+    drawCurrentScreen();
+  }
+
   if (speedAvailable && millis() - lastSpeedUpdateMs > 8000) {
     speedAvailable = false;
-    drawSpeedPanel();
+    if (!orientationCheckActive) {
+      drawSpeedPanel();
+    }
     Serial.println("SPEED=stale");
   }
-  delay(100);
+  yield();
 }

@@ -22,9 +22,10 @@ Este sketch cria um periférico BLE chamado `BeeLine-ESP32`, recebe cada instru�
    #define TFT_BACKLIGHT_ON HIGH
    ```
 
-4. Abra `beeline-esp32.ino`, selecione **ESP32 Dev Module** e envie o sketch. Na inicialização, a tela mostra por 1,2 segundo uma moldura de teste, a orientação detectada e a resolução; depois volta à tela normal do BeeLine.
-5. Abra o monitor serial em `115200` baud. O resultado esperado é `TFT orientation: 320 x 240 (expected 320 x 240)`, seguido da tela normal e do anúncio `BeeLine-ESP32`.
-6. Se a resolução não for `320 x 240`, confira se `User_Setup_Select.h` seleciona o `User_Setup.h` que você editou e grave o sketch novamente. A seta, BLE, navegação e velocidade continuam sendo desenhadas pelo firmware BeeLine.
+4. Abra `beeline-esp32.ino`, selecione **ESP32 Dev Module** e envie o sketch. `display.setRotation()` é aplicado logo após `display.init()`. A tela de verificação aparece por 1,2 segundo sem bloquear a inicialização do BLE.
+5. Abra o monitor serial em `115200` baud. Na rotação padrão `1`, o resultado esperado é `[INFO] Rotacao aplicada: 1 (Largura=320 Altura=240)`, seguido de `BeeLine-ESP32 ready`.
+6. Para testar a orientação sem recompilar, envie `r0`, `r1`, `r2` ou `r3` no monitor serial. O firmware mostra a rotação e a resolução selecionadas por 1,2 segundo, e depois restaura a tela de navegação ou espera. Em geral, `r0` e `r2` são retrato (240 x 320), enquanto `r1` e `r3` são paisagem (320 x 240); a posição visual pode variar conforme a montagem da placa. Escolha a orientação correta e altere `DEFAULT_DISPLAY_ROTATION` para esse valor antes de gravar a versão definitiva.
+7. Se nenhuma rotação resultar em `320 x 240`, confira se `User_Setup_Select.h` seleciona o `User_Setup.h` que você editou, o driver e os pinos da revisão exata da placa. CS/DC trocados ou driver incorreto normalmente causam falha, imagem corrompida ou ausência de imagem; não são um mecanismo confiável de fallback para retrato. O firmware usa uma única instância global do display.
 
 ## Contrato BLE
 
