@@ -55,10 +55,10 @@ static constexpr uint16_t COLOR_BACKGROUND = 0x2104;  // neutral dark gray
 static constexpr uint16_t COLOR_SURFACE = 0x1A2C;
 static constexpr uint16_t COLOR_BLACK = 0x0000;
 static constexpr uint16_t COLOR_AMBER = 0xF6A8;
+static constexpr uint16_t COLOR_SPEED_MIDDLE = 0xB4A4;
+static constexpr uint16_t COLOR_SPEED_HIGH = 0x7B24;
 static constexpr uint16_t COLOR_TEXT = 0xFFFF;
 static constexpr uint16_t COLOR_MUTED = 0x9DB1;
-static constexpr uint16_t COLOR_GREEN = 0x36E6;
-static constexpr uint16_t COLOR_YELLOW = 0xF7E0;
 static constexpr uint16_t COLOR_RED = 0xF986;
 
 struct NavigationInstruction {
@@ -179,7 +179,7 @@ void drawBackground() {
   display.fillScreen(COLOR_BACKGROUND);
 }
 
-void drawSpeedPanel(bool restoreBackground = true) {
+void drawSpeedPanel() {
   using namespace Layout;
   const int16_t width = display.width();
   const int16_t panelTop = PANEL_TOP;
@@ -188,10 +188,7 @@ void drawSpeedPanel(bool restoreBackground = true) {
   const int16_t barY = BAR_Y;
   const int16_t barHeight = BAR_HEIGHT;
 
-  if (restoreBackground) {
-    display.fillRect(0, panelTop, width, display.height() - panelTop, COLOR_BACKGROUND);
-  }
-  display.drawFastHLine(MARGIN, panelTop, width - 2 * MARGIN, COLOR_SURFACE);
+  display.fillRect(0, panelTop, width, display.height() - panelTop, COLOR_BLACK);
 
   display.setTextDatum(TL_DATUM);
   display.setTextColor(COLOR_MUTED);
@@ -210,17 +207,17 @@ void drawSpeedPanel(bool restoreBackground = true) {
                    COLOR_BLACK);
   const int16_t mark50 = scaleX + static_cast<int16_t>(scaleWidth * float(GREEN_LIMIT) / SCALE_MAX);
   const int16_t mark100 = scaleX + static_cast<int16_t>(scaleWidth * float(YELLOW_LIMIT) / SCALE_MAX);
-  display.fillRect(scaleX, barY, mark50 - scaleX, barHeight, COLOR_GREEN);
-  display.fillRect(mark50, barY, mark100 - mark50, barHeight, COLOR_YELLOW);
-  display.fillRect(mark100, barY, scaleX + scaleWidth - mark100, barHeight, COLOR_RED);
+  display.fillRect(scaleX, barY, mark50 - scaleX, barHeight, COLOR_AMBER);
+  display.fillRect(mark50, barY, mark100 - mark50, barHeight, COLOR_SPEED_MIDDLE);
+  display.fillRect(mark100, barY, scaleX + scaleWidth - mark100, barHeight, COLOR_SPEED_HIGH);
 
   for (const uint16_t value : GRADUATIONS) {
     const int16_t x = scaleX + static_cast<int16_t>(scaleWidth * float(value) / SCALE_MAX);
     const bool special = value == GREEN_LIMIT || value == YELLOW_LIMIT;
     display.drawFastVLine(x, barY - (special ? 7 : 4), barHeight + (special ? 14 : 8),
-                          special ? COLOR_TEXT : COLOR_MUTED);
+                          special ? COLOR_AMBER : COLOR_MUTED);
     display.setTextDatum(TC_DATUM);
-    display.setTextColor(special ? COLOR_TEXT : COLOR_MUTED);
+    display.setTextColor(special ? COLOR_AMBER : COLOR_MUTED);
     display.drawString(String(value), x, SCALE_LABEL_Y, 1);
   }
 
@@ -263,10 +260,9 @@ void drawIdleScreen() {
   display.drawString("BEELINE", display.width() / 2, 25, 4);
   display.setTextColor(COLOR_MUTED);
   display.drawCentreString("Aguardando instrucoes", display.width() / 2, 81, 2);
-  display.drawRoundRect(28, 139, display.width() - 56, 51, 12, COLOR_SURFACE);
   display.setTextColor(COLOR_TEXT);
   display.drawCentreString("Conecte pelo app Android", display.width() / 2, 157, 2);
-  drawSpeedPanel(false);
+  drawSpeedPanel();
 }
 
 void renderInstruction(const NavigationInstruction& instruction) {
@@ -288,7 +284,7 @@ void renderInstruction(const NavigationInstruction& instruction) {
     }
     display.drawString(road, display.width() / 2, Layout::ROAD_Y, 2);
   }
-  drawSpeedPanel(false);
+  drawSpeedPanel();
 }
 
 void drawCurrentScreen() {

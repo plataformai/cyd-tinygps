@@ -3,8 +3,13 @@
 constexpr int TL_DATUM = 0, TC_DATUM = 1, MC_DATUM = 2;
 struct TFT_eSPI {
   struct RectSample { int x, y, width, height; uint16_t color; };
+  struct LineSample { int x, y, length; uint16_t color; };
+  struct TextSample { std::string value; int x, y, font, color; };
   std::vector<RectSample> rectangles;
+  std::vector<LineSample> horizontalLines, verticalLines;
+  std::vector<TextSample> textSamples;
   int rotation = 1, fullDraws = 0, panelDraws = 0, calls = 0;
+  int roundRectCalls = 0, activeTextColor = 0;
   std::vector<std::string> text;
   std::vector<int> graduations;
   uint16_t lastFillScreenColor = 0, lastFillColor = 0;
@@ -22,14 +27,19 @@ struct TFT_eSPI {
     rectangles.push_back({x, y, width, height, static_cast<uint16_t>(color)});
   }
   template <typename... T> void fillTriangle(T...) { touch(); }
-  template <typename... T> void drawFastHLine(T...) { touch(); }
-  template <typename... T> void drawFastVLine(T...) { touch(); }
+  void drawFastHLine(int x, int y, int width, int color) {
+    touch(); horizontalLines.push_back({x, y, width, static_cast<uint16_t>(color)});
+  }
+  void drawFastVLine(int x, int y, int height, int color) {
+    touch(); verticalLines.push_back({x, y, height, static_cast<uint16_t>(color)});
+  }
   template <typename... T> void drawRect(T...) { touch(); }
-  template <typename... T> void drawRoundRect(T...) { touch(); }
+  template <typename... T> void drawRoundRect(T...) { touch(); ++roundRectCalls; }
   template <typename... T> void setTextDatum(T...) { touch(); }
-  template <typename... T> void setTextColor(T...) { touch(); }
-  void drawString(const String& v, int, int y, int) {
+  void setTextColor(int color) { touch(); activeTextColor = color; }
+  void drawString(const String& v, int x, int y, int font) {
     touch(); text.push_back(v.value);
+    textSamples.push_back({v.value, x, y, font, activeTextColor});
     if (y == 222) graduations.push_back(std::stoi(v.value));
   }
   void drawCentreString(const String& v, int, int, int) { touch(); text.push_back(v.value); }

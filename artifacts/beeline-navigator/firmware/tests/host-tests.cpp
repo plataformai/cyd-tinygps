@@ -32,6 +32,10 @@ static void reject(const std::string& raw) {
 int main() {
   static_assert(COLOR_BACKGROUND == 0x2104, "Use neutral dark gray");
   static_assert(COLOR_BLACK == 0x0000, "Use black speed-scale backing");
+  static_assert(COLOR_AMBER == 0xF6A8, "Speed band one matches the BEELINE title");
+  static_assert(COLOR_AMBER > COLOR_SPEED_MIDDLE &&
+                COLOR_SPEED_MIDDLE > COLOR_SPEED_HIGH,
+                "Speed bands get progressively darker");
   setup();
   const auto* advertisingConfig = NimBLEDevice::getAdvertising();
   assert(advertisingConfig->scanResponseEnabled);
@@ -48,9 +52,43 @@ int main() {
   tick(1);
   assert(!orientationCheckActive && display.fullDraws == 2);
   assert(display.lastFillScreenColor == COLOR_BACKGROUND);
+  assert(display.horizontalLines.empty()); // No blue divider above the black band.
+  assert(display.roundRectCalls == 0); // No outline around the Android connection prompt.
   assert(currentInstruction.maneuver == "slight_right" && currentInstruction.distanceMeters == 350);
   const std::vector<int> expected = {0, 20, 40, 50, 60, 80, 100, 120, 140};
   assert(display.graduations == expected);
+  const int scaleWidth = display.width() - Layout::SCALE_X - Layout::MARGIN;
+  const int mark50 = Layout::SCALE_X + scaleWidth * 50 / Layout::SCALE_MAX;
+  const int mark100 = Layout::SCALE_X + scaleWidth * 100 / Layout::SCALE_MAX;
+  const auto hasRectangle = [&](int x, int y, int width, int height, uint16_t color) {
+    return std::any_of(display.rectangles.begin(), display.rectangles.end(),
+        [&](const auto& rectangle) {
+          return rectangle.x == x && rectangle.y == y && rectangle.width == width &&
+                 rectangle.height == height && rectangle.color == color;
+        });
+  };
+  assert(hasRectangle(0, Layout::PANEL_TOP, display.width(),
+                      display.height() - Layout::PANEL_TOP, COLOR_BLACK));
+  assert(hasRectangle(Layout::SCALE_X, Layout::BAR_Y, mark50 - Layout::SCALE_X,
+                      Layout::BAR_HEIGHT, COLOR_AMBER));
+  assert(hasRectangle(mark50, Layout::BAR_Y, mark100 - mark50,
+                      Layout::BAR_HEIGHT, COLOR_SPEED_MIDDLE));
+  assert(hasRectangle(mark100, Layout::BAR_Y,
+                      display.width() - Layout::MARGIN - mark100,
+                      Layout::BAR_HEIGHT, COLOR_SPEED_HIGH));
+  for (const int mark : {mark50, mark100}) {
+    assert(std::any_of(display.verticalLines.begin(), display.verticalLines.end(),
+        [&](const auto& line) {
+          return line.x == mark && line.y == Layout::BAR_Y - 7 &&
+                 line.color == COLOR_AMBER;
+        }));
+    assert(std::any_of(display.textSamples.begin(), display.textSamples.end(),
+        [&](const auto& sample) {
+          return sample.y == Layout::SCALE_LABEL_Y &&
+                 sample.value == std::to_string(mark == mark50 ? 50 : 100) &&
+                 sample.color == COLOR_AMBER;
+        }));
+  }
 
   // Empty, oversized, malformed, wrong types, NULs, non-object and trailing input.
   for (const std::string& raw : std::vector<std::string>{
@@ -146,14 +184,14 @@ int main() {
   assert(display.panelDraws == panels);
   tick(80);
   assert(display.panelDraws == panels + 1);
-  bool restoredDarkGray = false;
+  bool restoredBlackPanel = false;
   bool blackSpeedTrack = false;
   for (size_t i = rectanglesBeforeSpeedRedraw; i < display.rectangles.size(); ++i) {
     const auto& rectangle = display.rectangles[i];
-    restoredDarkGray |= rectangle.x == 0 && rectangle.y == Layout::PANEL_TOP &&
+    restoredBlackPanel |= rectangle.x == 0 && rectangle.y == Layout::PANEL_TOP &&
         rectangle.width == display.width() &&
         rectangle.height == display.height() - Layout::PANEL_TOP &&
-        rectangle.color == COLOR_BACKGROUND;
+        rectangle.color == COLOR_BLACK;
     blackSpeedTrack |= rectangle.x == Layout::SCALE_X - Layout::SCALE_BACKING_PADDING &&
         rectangle.y == Layout::BAR_Y - Layout::SCALE_BACKING_PADDING &&
         rectangle.width == display.width() - Layout::SCALE_X - Layout::MARGIN +
@@ -161,7 +199,7 @@ int main() {
         rectangle.height == Layout::BAR_HEIGHT + 2 * Layout::SCALE_BACKING_PADDING &&
         rectangle.color == COLOR_BLACK;
   }
-  assert(restoredDarkGray && blackSpeedTrack);
+  assert(restoredBlackPanel && blackSpeedTrack);
   const int unchanged = display.calls;
   write(R"({"type":"speed","valid":true,"speedKmh":81.01})"); tick();
   assert(display.calls == unchanged);
@@ -215,7 +253,22 @@ int main() {
   server->callbacks->onDisconnect(server, info, 0);
   assert(NimBLEDevice::getAdvertising()->starts == advertising + 1);
   assert(hasNavigationInstruction);
-  std::cout << "PASS: solid dark-gray rendering, black speed track and speed-panel-only refresh\n";
+  const size_t idlePanelStart = display.rectangles.size();
+  const size_t horizontalLinesBeforeIdle = display.horizontalLines.size();
+  const int roundRectanglesBeforeIdle = display.roundRectCalls;
+  drawIdleScreen();
+  assert(display.horizontalLines.size() == horizontalLinesBeforeIdle);
+  assert(display.roundRectCalls == roundRectanglesBeforeIdle);
+  assert(std::find(display.text.begin(), display.text.end(),
+                   "Conecte pelo app Android") != display.text.end());
+  assert(std::any_of(display.rectangles.begin() + idlePanelStart, display.rectangles.end(),
+      [](const auto& rectangle) {
+        return rectangle.x == 0 && rectangle.y == Layout::PANEL_TOP &&
+               rectangle.width == display.width() &&
+               rectangle.height == display.height() - Layout::PANEL_TOP &&
+               rectangle.color == COLOR_BLACK;
+      }));
+  std::cout << "PASS: dark upper screen, full black speed panel and speed-panel-only refresh\n";
   std::cout << "PASS: refresh limit, r0-r3, diagnostic restoration, maneuvers and advertising restart\n";
   std::cout << "All host firmware checks passed (hardware APIs simulated).\n";
   std::cout << "PASS: explicit service UUID and device name in scan response\n";

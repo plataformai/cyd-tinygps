@@ -353,70 +353,28 @@ export default function HomeScreen() {
             </View>
             <View>
               <Text style={[styles.brandName, { color: colors.foreground }]}>beeline</Text>
-              <Text style={[styles.brandCaption, { color: colors.mutedForeground }]}>NAVIGADOR ESP32</Text>
+              <Text style={[styles.brandCaption, { color: colors.mutedForeground }]}>TinyGPS ESP32</Text>
             </View>
           </View>
           <View style={[styles.previewPill, { backgroundColor: colors.accent }]}>
-            <View style={[styles.statusDot, { backgroundColor: colors.primary }]} />
+            <View
+              accessibilityLabel={isConnected ? 'BeeLine ESP32 conectado' : 'BeeLine ESP32 desconectado'}
+              style={[
+                styles.statusDot,
+                {
+                  backgroundColor: isConnected
+                    ? colors.accentForeground
+                    : connectionState === 'searching' || connectionState === 'connecting'
+                      ? colors.primary
+                      : colors.destructive,
+                },
+              ]}
+              testID="ble-status-indicator"
+            />
             <Text style={[styles.previewText, { color: colors.accentForeground }]}>
               {BeeLineAndroid.available ? 'ANDROID' : 'BUILD NATIVA'}
             </Text>
           </View>
-        </View>
-
-        <View style={styles.headingBlock}>
-          <Text style={[styles.eyebrow, { color: colors.mutedForeground }]}>NAVEGAÇÃO SEM DESVIAR O OLHAR</Text>
-          <Text style={[styles.heading, { color: colors.foreground }]}>A próxima curva,{'\n'}de relance.</Text>
-          <Text style={[styles.intro, { color: colors.mutedForeground }]}>
-            O objetivo é levar as instruções do Maps até a seta do seu ESP32 por Bluetooth.
-          </Text>
-        </View>
-
-        <View style={[styles.connectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.connectionTop}>
-            <View style={[styles.bluetoothIcon, { backgroundColor: colors.secondary }]}>
-              <Feather name="bluetooth" size={19} color={colors.mutedForeground} />
-            </View>
-            <View style={styles.connectionCopy}>
-              <Text style={[styles.cardEyebrow, { color: colors.mutedForeground }]}>DISPOSITIVO</Text>
-              <Text style={[styles.connectionTitle, { color: colors.foreground }]}>{connectionMessage}</Text>
-            </View>
-            <View style={[styles.offlinePill, { backgroundColor: isConnected ? colors.accent : colors.secondary }]}>
-              <Text style={[styles.offlineText, { color: isConnected ? colors.accentForeground : colors.mutedForeground }]}>
-                {isConnected ? 'CONECTADO' : connectionState === 'searching' || connectionState === 'connecting' ? 'BUSCANDO' : 'OFFLINE'}
-              </Text>
-            </View>
-          </View>
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <Text style={[styles.helperText, { color: colors.mutedForeground }]}>
-            {BeeLineAndroid.available
-              ? 'BLE ativo. Mantenha a placa ligada e próxima do telefone.'
-              : 'O preview web não acessa Bluetooth. Use uma build nativa Android, não o Expo Go.'}
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            disabled={connectionState === 'searching' || connectionState === 'connecting'}
-            onPress={() => {
-              if (isConnected) {
-                void BeeLineAndroid.disconnect();
-              } else {
-                void connectDevice();
-              }
-            }}
-            style={({ pressed }) => [
-              styles.primaryAction,
-              { backgroundColor: colors.accent, opacity: pressed ? 0.75 : 1 },
-            ]}
-            testID="ble-connect"
-          >
-            <Feather name={isConnected ? 'bluetooth' : 'search'} size={16} color={colors.accentForeground} />
-            <Text style={[styles.primaryActionText, { color: colors.accentForeground }]}>
-              {isConnected ? 'Desconectar ESP32' : connectionState === 'searching' || connectionState === 'connecting' ? 'Procurando BeeLine…' : 'Conectar BeeLine-ESP32'}
-            </Text>
-          </Pressable>
-          {operationError ? (
-            <Text accessibilityRole="alert" style={[styles.errorText, { color: colors.destructive }]}>{operationError}</Text>
-          ) : null}
         </View>
 
         <View style={styles.turnHeader}>
@@ -482,6 +440,53 @@ export default function HomeScreen() {
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>PREPARAÇÃO</Text>
           <Text style={[styles.progressText, { color: colors.mutedForeground }]}>{notificationEnabled ? '1 DE 2 · ATIVO' : '1 DE 2'}</Text>
+        </View>
+
+        <View style={[styles.connectionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.connectionTop}>
+            <View style={[styles.bluetoothIcon, { backgroundColor: colors.secondary }]}>
+              <Feather name="bluetooth" size={19} color={colors.mutedForeground} />
+            </View>
+            <View style={styles.connectionCopy}>
+              <Text style={[styles.cardEyebrow, { color: colors.mutedForeground }]}>DISPOSITIVO</Text>
+              <Text style={[styles.connectionTitle, { color: colors.foreground }]}>{connectionMessage}</Text>
+            </View>
+            <View style={[styles.offlinePill, { backgroundColor: isConnected ? colors.accent : colors.secondary }]}>
+              <Text style={[styles.offlineText, { color: isConnected ? colors.accentForeground : colors.mutedForeground }]}>
+                {isConnected ? 'CONECTADO' : connectionState === 'searching' || connectionState === 'connecting' ? 'BUSCANDO' : 'OFFLINE'}
+              </Text>
+            </View>
+          </View>
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <Text style={[styles.helperText, { color: colors.mutedForeground }]}>
+            {BeeLineAndroid.available
+              ? 'BLE ativo. Mantenha a placa ligada e próxima do telefone.'
+              : 'O preview web não acessa Bluetooth. Use uma build nativa Android, não o Expo Go.'}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            disabled={connectionState === 'searching' || connectionState === 'connecting'}
+            onPress={() => {
+              if (isConnected) {
+                void BeeLineAndroid.disconnect();
+              } else {
+                void connectDevice();
+              }
+            }}
+            style={({ pressed }) => [
+              styles.primaryAction,
+              { backgroundColor: colors.accent, opacity: pressed ? 0.75 : 1 },
+            ]}
+            testID="ble-connect"
+          >
+            <Feather name={isConnected ? 'bluetooth' : 'search'} size={16} color={colors.accentForeground} />
+            <Text style={[styles.primaryActionText, { color: colors.accentForeground }]}>
+              {isConnected ? 'Desconectar ESP32' : connectionState === 'searching' || connectionState === 'connecting' ? 'Procurando BeeLine…' : 'Conectar BeeLine-ESP32'}
+            </Text>
+          </Pressable>
+          {operationError ? (
+            <Text accessibilityRole="alert" style={[styles.errorText, { color: colors.destructive }]}>{operationError}</Text>
+          ) : null}
         </View>
 
         <Pressable
@@ -603,19 +608,15 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   webScroll: { flex: 1, paddingTop: 67, paddingBottom: 34 },
   content: { width: '100%', maxWidth: 520, alignSelf: 'center', paddingHorizontal: 22, paddingTop: 12, paddingBottom: 34 },
-  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 35 },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 25 },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   brandMark: { width: 40, height: 40, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   brandName: { fontSize: 20, lineHeight: 22, fontFamily: 'Inter_700Bold', letterSpacing: -0.8 },
   brandCaption: { fontSize: 9, lineHeight: 13, letterSpacing: 1.4, fontFamily: 'Inter_600SemiBold' },
   previewPill: { flexDirection: 'row', alignItems: 'center', gap: 7, borderRadius: 30, paddingHorizontal: 11, paddingVertical: 7 },
-  statusDot: { width: 6, height: 6, borderRadius: 4 },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
   previewText: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 0.9 },
-  headingBlock: { marginBottom: 23 },
-  eyebrow: { fontSize: 10, fontFamily: 'Inter_600SemiBold', letterSpacing: 1.2, marginBottom: 11 },
-  heading: { fontSize: 35, lineHeight: 39, letterSpacing: -1.4, fontFamily: 'Inter_700Bold', marginBottom: 11 },
-  intro: { fontSize: 14, lineHeight: 21, fontFamily: 'Inter_400Regular', maxWidth: 400 },
-  connectionCard: { borderWidth: 1, borderRadius: 20, padding: 16, marginBottom: 26 },
+  connectionCard: { borderWidth: 1, borderRadius: 20, padding: 16, marginBottom: 9 },
   connectionTop: { flexDirection: 'row', alignItems: 'center', gap: 11 },
   bluetoothIcon: { width: 39, height: 39, alignItems: 'center', justifyContent: 'center', borderRadius: 13 },
   connectionCopy: { flex: 1, gap: 3 },
