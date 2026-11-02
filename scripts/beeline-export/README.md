@@ -1,8 +1,10 @@
 # BeeLine Navigator — projeto Android independente
 
-Este ZIP contém código-fonte, **não um APK compilado**. Extraia a pasta `beeline-apk`
-para fora de qualquer monorepo e trabalhe dentro dela. Não crie um projeto vazio no
-Android Studio nem copie estes arquivos sobre um projeto Android diferente.
+Este ZIP contém código-fonte, **não um APK compilado**. Depois de extrair, a pasta do
+projeto deve conter diretamente `package.json`, `app.json`, `eas.json`, `plugins/` e
+os diretórios do app. Não há uma pasta `beeline-apk/` envolvendo esses arquivos.
+Trabalhe fora do monorepo. Não crie um projeto vazio no Android Studio nem copie
+estes arquivos sobre outro projeto Android.
 
 O app usa código Android local para ler notificações do Google Maps e comunicar
 por BLE com a ESP32. A velocidade vem da localização do telefone. **Expo Go e
@@ -13,22 +15,25 @@ preview web não executam essas integrações nativas.**
 - Node **22.13.0** e npm (sugestão: npm 10.9.2, incluído nessa versão do Node).
 - Expo SDK **58**, mantido sem downgrade. Expo e React Native desse SDK aceitam
   Node `^22.13.0 || ^24.3.0 || >=26.0.0`. O perfil EAS usa 22.13.0.
-- Internet para baixar as dependências. O `package-lock.json` incluído deve ser
-  mantido no controle de versão.
+- Internet para baixar dependências diretamente do registry público do npm.
+- O ZIP não inclui `package-lock.json`. O primeiro `npm install` cria um lockfile
+  local para o seu projeto; mantenha esse arquivo no seu próprio Git.
 
 ## Instalar e verificar
 
 Abra um terminal **na pasta que contém este README e package.json**:
 
 ```sh
-npm ci
-npm run typecheck
+npm install --registry=https://registry.npmjs.org
 npx expo install --check
+npm run typecheck
 npx --yes expo-doctor@1.21.5
 ```
 
-Use npm neste projeto. Não copie `node_modules`, lockfiles ou configurações da
-pasta pai. Não use `--legacy-peer-deps` para esconder incompatibilidades.
+Use npm neste projeto. O comando inicial cria `package-lock.json` somente no projeto
+extraído. Depois desse primeiro install, `npm ci` pode ser usado para reinstalações
+reproduzíveis. Não copie `node_modules`, lockfiles nem `.npmrc` da pasta pai e não
+use `--legacy-peer-deps` para esconder incompatibilidades.
 Se o Expo Doctor não conseguir consultar serviços externos, diferencie esse
 problema de rede de uma falha de código.
 
@@ -38,14 +43,20 @@ Não é preciso ter Android Studio para esta opção. É necessária uma conta E
 a build pode consumir a cota ou gerar custo conforme o plano da conta.
 
 ```sh
+git init
 npx eas-cli@latest login
 npx eas-cli@latest init
-npx eas-cli@latest build --platform android --profile preview
+git add .
+git commit -m "Initial BeeLine Android project"
+npx eas-cli@latest build -p android --profile preview
 ```
 
 No `init`, crie/vincule um projeto **da sua própria conta** e mantenha as
 configurações do perfil preview no `eas.json`. A CLI pode adicionar o projectId ao
-app.json. Não há projectId de outra pessoa nem credenciais neste pacote.
+app.json; faça o commit depois dessa etapa, incluindo o `package-lock.json` local
+gerado pelo `npm install`. O EAS Build precisa de um repositório Git inicializado e
+com ao menos um commit. Se o Git solicitar uma identidade, configure-a localmente.
+Não há projectId de outra pessoa nem credenciais neste pacote.
 O perfil preview pede distribuição interna e saída APK. Baixe o APK no endereço
 fornecido ao final pelo EAS e instale no telefone autorizando a origem do arquivo.
 Nenhuma build EAS foi iniciada automaticamente para preparar este ZIP.
@@ -56,7 +67,8 @@ Instale Android Studio, Android SDK e o JDK exigido pelo projeto Gradle gerado.
 Configure `ANDROID_HOME` e `JAVA_HOME`. Em seguida, na raiz deste projeto:
 
 ```sh
-npm ci
+npm install --registry=https://registry.npmjs.org
+npx expo install --check
 npx expo prebuild --platform android
 ```
 

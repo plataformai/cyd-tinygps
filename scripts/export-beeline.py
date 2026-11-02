@@ -2,8 +2,11 @@
 """Export BeeLine from tracked sources without copying workspace infrastructure.
 
 Run: python3 scripts/export-beeline.py
-Update the independent npm lock after a dependency change:
+Refresh the internal validation lock after a dependency change:
      python3 scripts/export-beeline.py --refresh-lock
+
+The generated ZIP has the Expo app files directly at its root and deliberately
+does not include either npm or pnpm lockfiles.
 """
 
 import argparse
@@ -164,9 +167,19 @@ def export(refresh=False):
     local_module = read_json(local_package)
     local_module["name"] = "beeline-android"
     write_json(local_package, local_module)
-    shutil.copy2(LOCK, STAGE / "package-lock.json")
     for filename in ("README.md", "eas.json", ".easignore", ".nvmrc"):
         shutil.copy2(TEMPLATES / filename, STAGE / filename)
+
+    forbidden_files = {"package-lock.json", "pnpm-lock.yaml", ".npmrc"}
+    forbidden_root_dirs = {"node_modules", ".expo", "android", "ios"}
+    for path in STAGE.rglob("*"):
+        if not path.is_file():
+            continue
+        relative = path.relative_to(STAGE)
+        if path.name in forbidden_files:
+            raise SystemExit(f"Forbidden file in export: {relative}")
+        if relative.parts and relative.parts[0] in forbidden_root_dirs:
+            raise SystemExit(f"Generated dependency/build directory in export: {relative}")
 
     for path in STAGE.rglob("*"):
         if path.is_file() and path.suffix in (".json", ".js", ".ts", ".tsx"):
@@ -176,11 +189,11 @@ def export(refresh=False):
                                                "replit.internal")):
                 raise SystemExit(f"Workspace-only reference leaked into export: {path}")
     target = OUTPUT / "beeline-apk.zip"
-    # Stable member order/timestamps; the same source and lock yield the same ZIP.
+    # Stable member order/timestamps; the same source and internal lock yield the same ZIP.
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as archive:
         for path in sorted(STAGE.rglob("*")):
             if path.is_file():
-                name = "beeline-apk/" + path.relative_to(STAGE).as_posix()
+                name = path.relative_to(STAGE).as_posix()
                 info = zipfile.ZipInfo(name, (2026, 1, 1, 0, 0, 0))
                 info.compress_type = zipfile.ZIP_DEFLATED
                 info.external_attr = 0o100644 << 16

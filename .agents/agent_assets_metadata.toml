@@ -19,14 +19,14 @@ content_type = "image/png"
 id = "X6d5liqvopeFMUbBSZr5-"
 uri = "file://generated-artifacts/beeline-apk.zip"
 type = "unspecified"
-title = "BeeLine Android — ZIP corrigido para build externo"
-description = "Use esta versão: lockfile com URLs públicas, npm ci validado com cache vazio e hosts privados bloqueados, Node 22.13.0/npm 10.9.2. Inclui fontes, módulo Android e passo a passo; não contém APK compilado."
+title = "BeeLine Navigator — ZIP para build APK"
+description = "Projeto Expo Android independente: arquivos diretamente na raiz, sem package-lock.json, pnpm-lock.yaml ou .npmrc. Extraia e execute npm install; o ZIP contém instruções atualizadas para EAS e build local. É código-fonte, não um APK compilado."
 logical_id = "af290ce3-4f7d-4d9a-9714-32ad72ca0cdf"
-content_hash = "sha256:ed4c27d08546bf5aeebeb03e6e17db0a517e556a23da4d81fc056e510f68ee17"
-size = 1196389
-mtime_ms = 1793582889185
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/de0759da-5f67-480c-b1f0-86254d9d43f2"
-storage_version_token = "1793582937709587"
+content_hash = "sha256:3e639f77f76655c737323751310197bc87b4751b59449412bb4b98e783d69a9f"
+size = 1128382
+mtime_ms = 1793588457219
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/83f78f13-e06d-4698-ba62-cc6ee25dbb8b"
+storage_version_token = "1793588477505964"
 content_type = "application/octet-stream"
 
 [[outputs]]

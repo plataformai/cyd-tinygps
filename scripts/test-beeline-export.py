@@ -20,19 +20,38 @@ class StandaloneExportTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.zip = zipfile.ZipFile(ZIP)
-        cls.names = {n.removeprefix("beeline-apk/") for n in cls.zip.namelist()}
+        cls.names = set(cls.zip.namelist())
 
     @classmethod
     def tearDownClass(cls):
         cls.zip.close()
 
     def text(self, name):
-        return self.zip.read("beeline-apk/" + name).decode()
+        return self.zip.read(name).decode()
 
     def obj(self, name):
         return json.loads(self.text(name))
 
     def test_self_contained_package(self):
+        required = {
+            "package.json", "app.json", "eas.json",
+            "plugins/with-beeline-android.js",
+            "modules/beeline-android/android/build.gradle",
+            "README.md",
+        }
+        self.assertTrue(required <= self.names, required - self.names)
+        self.assertFalse(any(name.startswith("beeline-apk/") for name in self.names))
+
+        forbidden_files = {"package-lock.json", "pnpm-lock.yaml", ".npmrc"}
+        forbidden_root_dirs = {"node_modules", ".expo", "android", "ios",
+                               "server", "scripts", ".replit-artifact"}
+        for name in self.names:
+            parts = Path(name).parts
+            self.assertNotIn(Path(name).name, forbidden_files, name)
+            self.assertFalse(parts and parts[0] in forbidden_root_dirs, name)
+            self.assertNotIn("node_modules", parts, name)
+            self.assertNotIn(".expo", parts, name)
+
         package = self.obj("package.json")
         self.assertEqual(package["name"], "beeline-apk")
         self.assertEqual(package["dependencies"]["@tanstack/react-query"], "^5.90.21")
@@ -45,22 +64,18 @@ class StandaloneExportTests(unittest.TestCase):
             if name.endswith((".json", ".js", ".ts", ".tsx")):
                 for token in ("workspace:", "catalog:", "REPLIT_", "@workspace/"):
                     self.assertNotIn(token, self.text(name), (name, token))
-        for name in self.names:
-            self.assertFalse(name.startswith(("node_modules/", "server/", "scripts/",
-                                             ".replit-artifact/", "android/", "ios/")))
-            self.assertNotIn(name, ("pnpm-lock.yaml", ".npmrc", "pnpm-workspace.yaml"))
 
-    def test_independent_npm_lock(self):
-        package, lock = self.obj("package.json"), self.obj("package-lock.json")
+    def test_internal_validation_lock_stays_out_of_zip(self):
+        self.assertNotIn("package-lock.json", self.names)
+        lock = json.loads((ROOT / "scripts/beeline-export/package-lock.json").read_text())
         self.assertEqual(lock["lockfileVersion"], 3)
-        for key in ("dependencies", "devDependencies", "engines"):
-            self.assertEqual(package[key], lock["packages"][""][key])
         for name, entry in lock["packages"].items():
             self.assertFalse(entry.get("link"), name)
             if "resolved" in entry:
                 url = urlsplit(entry["resolved"])
                 self.assertEqual(url.scheme, "https")
                 self.assertEqual(url.netloc, "registry.npmjs.org")
+        package = self.obj("package.json")
         # These binaries were excluded by root overrides, not by this export.
         self.assertNotIn("overrides", package)
         self.assertNotIn("resolutions", package)
@@ -123,7 +138,17 @@ class StandaloneExportTests(unittest.TestCase):
         self.assertEqual(eas["build"]["preview"]["android"]["buildType"], "apk")
         self.assertEqual(eas["build"]["preview"]["distribution"], "internal")
         self.assertEqual(eas["build"]["preview"]["node"], "22.13.0")
+        self.assertEqual(eas["cli"]["version"], ">= 5.9.0")
+        self.assertEqual(eas["build"]["production"], {})
         self.assertNotIn("EAS_PNPM_FILTER_WORKSPACE", self.text("eas.json"))
+
+    def test_fresh_install_instructions(self):
+        readme = self.text("README.md")
+        self.assertIn("npm install --registry=https://registry.npmjs.org", readme)
+        self.assertIn("npx expo install --check", readme)
+        self.assertIn("git init", readme)
+        self.assertIn("git commit", readme)
+        self.assertIn("eas-cli@latest build -p android --profile preview", readme)
 
 
 @unittest.skipUnless(ANDROID_PROJECT, "Set BEELINE_VERIFY_DIR after prebuild/export")

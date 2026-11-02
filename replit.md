@@ -43,3 +43,9 @@ _Populate as you build — sharp edges, "always run X before Y" rules._
 ## Pointers
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- BeeLine Android ZIP export: `python3 scripts/export-beeline.py`; the complete
+  generation, install, validation, and EAS workflow is in
+  `scripts/beeline-export/EXPORTACAO.md`. The archive opens at the Expo project
+  root and deliberately excludes npm/pnpm lockfiles and `.npmrc`; the first
+  `npm install` creates the user's local lockfile. Preserve the current app and
+  monorepo configuration.
