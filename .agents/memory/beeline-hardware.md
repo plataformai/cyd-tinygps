@@ -19,9 +19,9 @@ A placa fotografada é marcada ESP32-2432S028 e possui USB-C e micro-USB. O usu�
 
 ## Identificação BLE na bancada
 
-O usuário confirmou no nRF Connect o UUID BeeLine correto, mas sem nome BeeLine visível. A confirmação veio após a orientação de conectar a dispositivos N/A; não tratá-la como prova de que o UUID estava no anúncio de rádio.
+Os primeiros testes mostraram o UUID BeeLine sem nome visível, sem distinguir anúncio de serviços após conexão. Em novos prints, o nRF Connect mostrou explicitamente o nome BeeLine-ESP32 e o UUID do serviço no anúncio expandido, além de conexão GATT bem-sucedida com esse serviço.
 
-**Why:** Um serviço GATT correto pode existir mesmo quando o nome ou UUID esperado não aparece no advertising; confundir essas duas observações leva a diagnósticos incorretos do scanner Android.
+**Why:** Um serviço GATT correto pode existir mesmo quando o nome ou UUID esperado não aparece no advertising; os novos prints eliminam essa ambiguidade para o teste observado, mas não provam a conexão pelo app BeeLine.
 
-**How to apply:** Separar UUID anunciado de UUID descoberto após conexão. Não concluir que a placa está ausente só porque aparece como N/A, nem apresentar testes simulados como confirmação da conexão física.
+**How to apply:** Separar UUID anunciado de UUID descoberto após conexão. Priorizar versão efetivamente instalada, permissões e scanner do app no diagnóstico atual; não apresentar a conexão pelo nRF como prova de funcionamento do app BeeLine.
 
