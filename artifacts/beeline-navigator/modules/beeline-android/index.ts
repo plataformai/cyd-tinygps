@@ -18,6 +18,7 @@ type BeeLineNativeModule = {
   writeCommand(command: string): Promise<void>;
   disconnect(): Promise<void>;
   addListener(eventName: 'onConnectionStateChange', listener: (event: ConnectionEvent) => void): EventSubscription;
+  addListener(eventName: 'onMapsNotification', listener: (event: MapsNotification) => void): EventSubscription;
 };
 
 export type ConnectionEvent = { state: string; message: string };
@@ -46,5 +47,8 @@ export const BeeLineAndroid = {
   addConnectionListener: (listener: (event: ConnectionEvent) => void) => {
     requireAndroidModule();
     return nativeModule!.addListener('onConnectionStateChange', listener);
+  },
+  addMapsNotificationListener: (listener: (event: MapsNotification) => void) => {
+    return requireAndroidModule().addListener('onMapsNotification', listener);
   },
 };

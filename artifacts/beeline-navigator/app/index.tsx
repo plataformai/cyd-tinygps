@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import { useColors } from '@/hooks/useColors';
 import { BeeLineAndroid } from '@/modules/beeline-android';
-import { diagnosticTurn, makeNavigationCommand, parseMapsInstruction, type Turn } from '@/lib/navigation';
+import { diagnosticTurn, getMapsNotificationText, makeNavigationCommand, parseMapsInstruction, type Turn } from '@/lib/navigation';
 import { makeSpeedCommand } from '@/lib/speed';
 import { SPEED_TASK_NAME } from '@/lib/speed-task';
 
@@ -41,6 +41,8 @@ export default function HomeScreen() {
   const [notificationEnabled, setNotificationEnabled] = useState(false);
   const [liveTurn, setLiveTurn] = useState<Turn | null>(null);
   const [notificationStatus, setNotificationStatus] = useState('Ainda não recebi uma notificação do Google Maps.');
+  const [mapsReadState, setMapsReadState] = useState<'waiting' | 'disabled' | 'missing' | 'unsupported' | 'ready' | 'error'>('waiting');
+  const [capturedNotificationText, setCapturedNotificationText] = useState('');
   const [operationError, setOperationError] = useState('');
   const [sendingTest, setSendingTest] = useState(false);
   const [speedKmh, setSpeedKmh] = useState<number | null>(null);
@@ -51,8 +53,8 @@ export default function HomeScreen() {
   const lastSpeedFixAtRef = useRef(0);
   const isConnected = connectionState === 'connected';
   const message = makeNavigationCommand(diagnosticTurn, 1761600000000);
-  const notificationNotParsed = notificationStatus.includes('sem manobra compatível');
-  const notificationNotReceived = notificationStatus.startsWith('Nenhuma notificação');
+  const notificationNotParsed = mapsReadState === 'unsupported';
+  const notificationNotReceived = mapsReadState === 'missing';
 
   const refreshNotifications = useCallback(async () => {
     if (!BeeLineAndroid.available) return;
@@ -60,6 +62,9 @@ export default function HomeScreen() {
       const enabled = await BeeLineAndroid.isNotificationAccessEnabled();
       setNotificationEnabled(enabled);
       if (!enabled) {
+        lastNotificationRef.current = '';
+        setCapturedNotificationText('');
+        setMapsReadState('disabled');
         setLiveTurn(null);
         setNotificationStatus('Ative o acesso às notificações para receber instruções.');
         return;
@@ -67,19 +72,27 @@ export default function HomeScreen() {
       const notification = await BeeLineAndroid.getLatestNotification();
       if (!notification) {
         lastNotificationRef.current = '';
+        setCapturedNotificationText('');
+        setMapsReadState('missing');
         setLiveTurn(null);
         setNotificationStatus('Nenhuma notificação do Maps recebida. Com uma rota ativa, confira a central de notificações do celular.');
         return;
       }
-      const key = `${notification.postedAt}:${notification.title}:${notification.text}:${notification.bigText}`;
+      const key = JSON.stringify([
+        notification.postedAt, notification.title, notification.text,
+        notification.bigText, notification.subText, notification.textLines,
+      ]);
       if (key === lastNotificationRef.current) return;
       lastNotificationRef.current = key;
       const parsed = parseMapsInstruction(notification);
+      setCapturedNotificationText(parsed ? '' : getMapsNotificationText(notification));
+      setMapsReadState(parsed ? 'ready' : 'unsupported');
       setLiveTurn(parsed);
       setNotificationStatus(parsed
         ? `Instrução recebida do Maps às ${new Date(notification.postedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`
         : 'O Maps publicou uma notificação sem manobra compatível.');
     } catch (error) {
+      setMapsReadState('error');
       setOperationError(error instanceof Error ? error.message : 'Falha ao ler notificações do Android.');
     }
   }, []);
@@ -93,6 +106,9 @@ export default function HomeScreen() {
           else setOperationError('');
         })
       : undefined;
+    const mapsSubscription = BeeLineAndroid.available
+      ? BeeLineAndroid.addMapsNotificationListener(() => void refreshNotifications())
+      : undefined;
     void refreshNotifications();
     const interval = setInterval(() => void refreshNotifications(), 1500);
     const appStateSubscription = AppState.addEventListener('change', (state) => {
@@ -102,6 +118,7 @@ export default function HomeScreen() {
       clearInterval(interval);
       appStateSubscription.remove();
       subscription?.remove();
+      mapsSubscription?.remove();
     };
   }, [refreshNotifications]);
 
@@ -450,6 +467,17 @@ export default function HomeScreen() {
         <Text style={[styles.demoNote, { color: colors.mutedForeground }]}>
           {notificationStatus}{!liveTurn ? ' Use “Enviar instrução de teste” para verificar a placa sem uma rota.' : ''}
         </Text>
+        {notificationNotParsed && (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => Alert.alert(
+              'Texto recebido do Maps',
+              `${capturedNotificationText.slice(0, 1200) || 'A notificação não contém texto nos campos acessíveis.'}\n\nEste texto é exibido somente neste celular. Pode conter nomes de vias ou destinos; o app não o envia a um servidor.`,
+            )}
+          >
+            <Text style={[styles.notificationDetails, { color: colors.primary }]}>Ver texto recebido do Maps</Text>
+          </Pressable>
+        )}
 
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>PREPARAÇÃO</Text>
@@ -616,6 +644,7 @@ const styles = StyleSheet.create({
   roadRow: { minHeight: 52, borderTopWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 17 },
   roadText: { flex: 1, fontSize: 12, fontFamily: 'Inter_500Medium' },
   demoNote: { fontSize: 11, lineHeight: 16, marginTop: 8, marginBottom: 24 },
+  notificationDetails: { fontSize: 12, lineHeight: 17, fontFamily: 'Inter_500Medium', textDecorationLine: 'underline', marginTop: -14, marginBottom: 24 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 9 },
   progressText: { fontSize: 10, fontFamily: 'Inter_500Medium', letterSpacing: 0.7 },
   setupRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 17, padding: 13, gap: 11 },

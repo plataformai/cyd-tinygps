@@ -135,6 +135,21 @@ class StandaloneExportTests(unittest.TestCase):
         self.assertIn("7b1e0001-6d2a-4f7a-9c21-8e8a4b12a001", native)
         self.assertIn("7b1e0002-6d2a-4f7a-9c21-8e8a4b12a001", native)
 
+    def test_maps_notification_lifecycle(self):
+        service = self.text(
+            "modules/beeline-android/android/src/main/java/expo/modules/beeline/"
+            "BeeLineNotificationListenerService.kt")
+        self.assertIn("override fun onListenerConnected()", service)
+        self.assertIn("activeNotifications", service)
+        self.assertIn('put("notificationKey", sbn.key)', service)
+        self.assertIn('JSONObject(current).optString("notificationKey") == sbn.key', service)
+        self.assertIn("if (!removedCurrent) return", service)
+        self.assertIn(".filterNot { it.key == sbn.key }", service)
+        app = self.text("app/index.tsx")
+        self.assertIn("addMapsNotificationListener", app)
+        self.assertIn("Notificação do Maps não reconhecida", app)
+        self.assertIn("Ver texto recebido do Maps", app)
+
     def test_android_and_eas_configuration(self):
         config = self.obj("app.json")["expo"]
         self.assertEqual(config["android"]["package"], "app.beeline.navigator")

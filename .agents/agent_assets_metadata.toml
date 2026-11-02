@@ -19,14 +19,14 @@ content_type = "image/png"
 id = "X6d5liqvopeFMUbBSZr5-"
 uri = "file://generated-artifacts/beeline-apk.zip"
 type = "unspecified"
-title = "Projeto Android — descoberta BLE atualizada"
-description = "Projeto-fonte independente para gerar novo APK. Busca por nome ou UUID, sem filtro rígido do Android. Não é um APK pronto."
+title = "BeeLine Android — captura de instruções Maps atualizada"
+description = "Projeto-fonte independente para gerar um novo APK. Inclui recuperação de notificações ativas, proteção contra remoção de outra notificação e diagnóstico local do texto recebido. Não é um APK compilado."
 logical_id = "af290ce3-4f7d-4d9a-9714-32ad72ca0cdf"
-content_hash = "sha256:c4e45fa1461d9c02fa187afb70f07ab3729ae1a5c72d749a909b5034ae6b0a76"
-size = 1128845
-mtime_ms = 1793621391064
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/d8032316-4df4-486b-af08-0987bd67d013"
-storage_version_token = "1793621404280924"
+content_hash = "sha256:151d7b57d749ed5ba57862a00de08077ccf760d5056a4c23cd8a08861549a5ed"
+size = 1130396
+mtime_ms = 1793633008190
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/08326be4-74e7-41ef-978a-83e6a576dfca"
+storage_version_token = "1793633061125960"
 content_type = "application/octet-stream"
 
 [[outputs]]

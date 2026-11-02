@@ -10,6 +10,26 @@ O app usa código Android local para ler notificações do Google Maps e comunic
 por BLE com a ESP32. A velocidade vem da localização do telefone. **Expo Go e
 preview web não executam essas integrações nativas.**
 
+## Diagnosticar instruções do Maps
+
+Com o BLE conectado e o acesso especial às notificações autorizado, inicie a
+navegação no Maps. O listener recupera notificações já ativas quando é conectado
+pelo Android e não apaga uma instrução mais recente ao remover outra notificação.
+O app distingue estes estados:
+
+- **Aguardando instrução do Maps:** nenhuma notificação foi recebida. Confira se o
+  Maps publica a navegação na central de notificações do celular.
+- **Notificação do Maps não reconhecida:** chegou conteúdo, mas o texto não tem
+  uma manobra compatível. Toque em **Ver texto recebido do Maps** para inspecionar
+  os campos acessíveis ao Android. Esse texto é exibido apenas no celular e pode
+  conter vias/destinos; não é enviado a servidor.
+- **Instrução do Maps enviada ao ESP32:** o app reconheceu a instrução e a escrita
+  BLE foi confirmada.
+
+Os testes do parser usam exemplos sintéticos; não substituem a confirmação com
+uma rota real. Atualizar este código nativo exige gerar e instalar um novo APK,
+mas não exige trocar o firmware da placa.
+
 ## Requisitos
 
 - Node **22.13.0** e npm (sugestão: npm 10.9.2, incluído nessa versão do Node).

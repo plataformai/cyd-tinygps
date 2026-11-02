@@ -3,6 +3,7 @@ package expo.modules.beeline
 import android.content.Intent
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import android.util.Log
 import org.json.JSONObject
 
 class BeeLineNotificationListenerService : NotificationListenerService() {
@@ -57,7 +58,8 @@ class BeeLineNotificationListenerService : NotificationListenerService() {
       activeNotifications
         ?.filter { it.packageName == MAPS_PACKAGE }
         .orEmpty()
-    } catch (_: SecurityException) {
+    } catch (error: SecurityException) {
+      Log.w("BeeLineNotifications", "Não foi possível consultar notificações ativas. Confira o acesso às notificações.", error)
       emptyList()
     }
   }

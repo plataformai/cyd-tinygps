@@ -20,15 +20,19 @@ function normalized(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
 }
 
-export function parseMapsInstruction(notification: MapsNotification & { textLines?: string }): Turn | null {
-  if (notification.packageName !== 'com.google.android.apps.maps') return null;
-  const source = [
+export function getMapsNotificationText(notification: MapsNotification): string {
+  return [
     notification.title,
     notification.text,
     notification.bigText,
     notification.subText,
     notification.textLines ?? '',
   ].filter(Boolean).join(' · ').trim();
+}
+
+export function parseMapsInstruction(notification: MapsNotification): Turn | null {
+  if (notification.packageName !== 'com.google.android.apps.maps') return null;
+  const source = getMapsNotificationText(notification);
   if (!source) return null;
 
   const text = normalized(source);
@@ -43,7 +47,7 @@ export function parseMapsInstruction(notification: MapsNotification & { textLine
     maneuver = 'left';
   } else if (/\b(direita|right)\b/.test(text)) {
     maneuver = 'right';
-  } else if (/\b(siga em frente|continue|straight|head north|head south|head east|head west)\b/.test(text)) {
+  } else if (/\b(siga em frente|continue|straight|head (?:north|south)(?:east|west)?|head east|head west|siga (?:na direcao|em direcao|em direcao ao|em direcao a) (?:norte|sul|leste|oeste|nordeste|noroeste|sudeste|sudoeste))\b/.test(text)) {
     maneuver = 'straight';
   }
   if (!maneuver) return null;
@@ -54,7 +58,8 @@ export function parseMapsInstruction(notification: MapsNotification & { textLine
     ? Math.min(65535, Math.max(0, Math.round(distanceValue * (/^(km|quil)/i.test(distanceMatch[2]) ? 1000 : 1))))
     : 0;
 
-  const roadMatch = source.match(/(?:\bna\b|\bno\b|\bpela\b|\bpelo\b|\bpara(?:\s+(?:a|o))?\b|\bonto\b|\bon)\s+([^,·]+?)(?=\s+(?:em|in)\s+\d|[,·]|$)/i);
+  const roadSource = source.replace(/\bsiga\s+(?:na|em)\s+dire[cç][aã]o(?:\s+(?:a|ao))?\s+(?:norte|sul|leste|oeste|nordeste|noroeste|sudeste|sudoeste)\b/i, '');
+  const roadMatch = roadSource.match(/(?:\bna\b|\bno\b|\bpela\b|\bpelo\b|\bpara(?:\s+(?:a|o))?\b|\bonto\b|\bon)\s+([^,·]+?)(?=\s+(?:em|in)\s+\d|[,·]|$)/i);
   const road = roadMatch?.[1]?.trim().replace(/[.!?]+$/, '').slice(0, 48) ?? '';
 
   return { maneuver, label: maneuverLabels[maneuver], distanceMeters, road };
