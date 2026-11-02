@@ -17,3 +17,11 @@ A placa fotografada é marcada ESP32-2432S028 e possui USB-C e micro-USB. O usu�
 
 **How to apply:** Para novas alterações nesta placa específica, preservar o setup que resolveu o display e não voltar ao ILI9341 nem sugerir troca de fios sem evidência nova. Isso não prova que todas as placas ESP32-2432S028 tenham o mesmo controlador.
 
+## Identificação BLE na bancada
+
+O usuário confirmou no nRF Connect o UUID BeeLine correto, mas sem nome BeeLine visível. A confirmação veio após a orientação de conectar a dispositivos N/A; não tratá-la como prova de que o UUID estava no anúncio de rádio.
+
+**Why:** Um serviço GATT correto pode existir mesmo quando o nome ou UUID esperado não aparece no advertising; confundir essas duas observações leva a diagnósticos incorretos do scanner Android.
+
+**How to apply:** Separar UUID anunciado de UUID descoberto após conexão. Não concluir que a placa está ausente só porque aparece como N/A, nem apresentar testes simulados como confirmação da conexão física.
+

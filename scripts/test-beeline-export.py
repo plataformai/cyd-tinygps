@@ -122,6 +122,19 @@ class StandaloneExportTests(unittest.TestCase):
             self.assertNotIn("android/", lines)
         self.assertIn("lib/speed-task.android.ts", self.names)
 
+    def test_ble_discovery_contract(self):
+        native = self.text(
+            "modules/beeline-android/android/src/main/java/expo/modules/beeline/"
+            "BeeLineAndroidModule.kt")
+        self.assertNotIn("ScanFilter.Builder()", native)
+        self.assertIn("result.scanRecord?.deviceName", native)
+        self.assertIn("result.scanRecord?.serviceUuids", native)
+        self.assertIn('if (!advertisedService && deviceName != "BeeLine-ESP32") return', native)
+        self.assertIn("scanCallback !== this", native)
+        self.assertIn("if (deviceFound)", native)
+        self.assertIn("7b1e0001-6d2a-4f7a-9c21-8e8a4b12a001", native)
+        self.assertIn("7b1e0002-6d2a-4f7a-9c21-8e8a4b12a001", native)
+
     def test_android_and_eas_configuration(self):
         config = self.obj("app.json")["expo"]
         self.assertEqual(config["android"]["package"], "app.beeline.navigator")

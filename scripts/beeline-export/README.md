@@ -123,6 +123,12 @@ declare `expo-modules-core` diretamente. Não remova essa infraestrutura do Grad
 1. Ligue a ESP32 com o firmware BeeLine já validado para seu display.
 2. Instale o APK, abra o app e conceda acesso às notificações nas configurações.
 3. Autorize Bluetooth, conecte a BeeLine-ESP32 e envie a instrução de teste.
+   A busca aceita o UUID anunciado ou o nome do dispositivo; a conexão só é
+   confirmada depois de localizar o serviço e a característica GATT.
+   Se a busca expirar, confira a placa no nRF Connect. Um dispositivo N/A pode
+   ser a ESP32: verifique os UUIDs, sem escrever valores em dispositivos
+   desconhecidos. Ver um UUID depois de conectar não comprova que ele era
+   anunciado antes da conexão. Desconecte o nRF Connect antes de usar o BeeLine.
 4. Ative a velocidade GPS e autorize a localização solicitada, inclusive em
    segundo plano para uso junto com o Maps.
 5. Confira instruções de uma rota real, reconexão BLE e perda de atualização GPS.

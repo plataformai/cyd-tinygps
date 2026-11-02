@@ -31,6 +31,14 @@ Este sketch cria um periférico BLE chamado `BeeLine-ESP32`, recebe cada instru�
 
 ## Contrato BLE
 
+O UUID do serviço é incluído no anúncio principal; o nome `BeeLine-ESP32` é
+configurado explicitamente na resposta de scan. São pacotes separados para
+acomodar o UUID de 128 bits e o nome dentro dos limites do advertising BLE.
+O Android busca sem filtro rígido do sistema e aceita somente resultados que
+tenham o UUID anunciado ou o nome BeeLine; depois confirma o serviço e a
+característica GATT. Um UUID visto apenas depois de conectar no nRF Connect
+confirma o serviço GATT, não que esse UUID estivesse no anúncio.
+
 - Serviço: `7b1e0001-6d2a-4f7a-9c21-8e8a4b12a001`
 - Escrita: `7b1e0002-6d2a-4f7a-9c21-8e8a4b12a001`
 - Tipo: UTF-8 JSON, máximo de 180 bytes por comando.
@@ -84,7 +92,7 @@ O preview web e o Expo Go não incluem código Android customizado. Para testar 
 3. Compile a build de diagnóstico com `cd android && ./gradlew assembleDebug`.
 4. Instale `android/app/build/outputs/apk/debug/app-debug.apk` no telefone (por exemplo, `adb install -r app/build/outputs/apk/debug/app-debug.apk`).
 5. Abra BeeLine, toque em **Acesso ao Google Maps** e permita o acesso nas configurações de **Acesso a notificações**. Volte ao app e confirme o status autorizado.
-6. Toque em **Conectar BeeLine-ESP32** e aceite as permissões Bluetooth solicitadas. O app procura o nome e o UUID do serviço; confira o estado **CONECTADO**.
+6. Desconecte o nRF Connect se estiver usando-o. Toque em **Conectar BeeLine-ESP32** e aceite as permissões Bluetooth solicitadas. O app aceita o nome ou o UUID anunciado e confirma o serviço GATT; confira o estado **CONECTADO**.
 7. Toque em **Enviar instrução de teste**. O TFT deve mostrar a seta ligeiramente à direita, `350 m` e `Rua Haddock Lobo`; o monitor serial deve registrar `TURN=slight_right`.
 8. Toque em **Ativar velocidade GPS**, permita localização durante o uso e depois localização em segundo plano. A notificação persistente do Android deve informar que a velocidade está sendo enviada.
 9. Em local aberto, mova-se com o telefone para obter uma leitura GPS e confira o valor no app, o preenchimento do marcador na régua do TFT e uma linha `SPEED=... km/h` no monitor serial. Parado, a velocidade pode aparecer como zero conforme a leitura do GPS.

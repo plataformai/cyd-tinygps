@@ -10,7 +10,6 @@ import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.BluetoothStatusCodes
 import android.bluetooth.le.ScanCallback
-import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
@@ -211,6 +210,7 @@ class BeeLineAndroidModule : Module() {
   }
 
   private fun failPendingConnection(message: String) {
+    stopScan()
     emitConnection("error", message)
     pendingConnection?.let { if (it.isActive) it.resumeWithException(IllegalStateException(message)) }
     pendingConnection = null
@@ -232,6 +232,10 @@ class BeeLineAndroidModule : Module() {
       continuation.resume(Unit)
       return@suspendCancellableCoroutine
     }
+    if (pendingConnection?.isActive == true) {
+      continuation.resumeWithException(IllegalStateException("Já existe uma busca ou conexão BeeLine em andamento."))
+      return@suspendCancellableCoroutine
+    }
     requireBluetoothPermission(Manifest.permission.BLUETOOTH_SCAN)
     requireBluetoothPermission(Manifest.permission.BLUETOOTH_CONNECT)
     val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
@@ -251,38 +255,64 @@ class BeeLineAndroidModule : Module() {
 
     emitConnection("searching", "Procurando BeeLine-ESP32…")
     pendingConnection = continuation
+    var deviceFound = false
     val callback = object : ScanCallback() {
       override fun onScanResult(callbackType: Int, result: ScanResult) {
+        if (scanCallback !== this || pendingConnection !== continuation) return
         val advertisedService = result.scanRecord?.serviceUuids?.any { it.uuid == SERVICE_UUID } == true
-        if (!advertisedService && result.device.name != "BeeLine-ESP32") return
+        val advertisedName = result.scanRecord?.deviceName
+        val deviceName = advertisedName ?: try {
+          result.device.name
+        } catch (_: SecurityException) {
+          null
+        }
+        if (!advertisedService && deviceName != "BeeLine-ESP32") return
+        deviceFound = true
         stopScan()
         emitConnection("connecting", "Conectando à placa…")
         try {
           bluetoothGatt = result.device.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
+          if (bluetoothGatt == null) {
+            failPendingConnection("A placa foi encontrada, mas o Android não iniciou a conexão BLE.")
+          }
         } catch (error: SecurityException) {
           failPendingConnection("Permissão Bluetooth ausente.")
+        } catch (error: Exception) {
+          failPendingConnection(error.message ?: "Não foi possível iniciar a conexão BLE.")
         }
       }
 
       override fun onScanFailed(errorCode: Int) {
-        failPendingConnection("A busca BLE falhou (código $errorCode).")
+        if (scanCallback === this && pendingConnection === continuation) {
+          failPendingConnection("A busca BLE falhou (código $errorCode).")
+        }
       }
     }
     scanCallback = callback
     continuation.invokeOnCancellation {
-      stopScan()
-      pendingConnection = null
+      if (pendingConnection === continuation) {
+        stopScan()
+        pendingConnection = null
+        bluetoothGatt?.disconnect()
+        bluetoothGatt?.close()
+        bluetoothGatt = null
+        commandCharacteristic = null
+      }
     }
     try {
       scanner.startScan(
-        listOf(ScanFilter.Builder().setServiceUuid(android.os.ParcelUuid(SERVICE_UUID)).build()),
+        // Do not discard devices before the name/UUID checks in onScanResult.
+        null,
         ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build(),
         callback,
       )
       mainHandler.postDelayed({
         if (pendingConnection === continuation) {
           stopScan()
-          failPendingConnection("BeeLine-ESP32 não encontrado. Confira se a placa está ligada.")
+          failPendingConnection(
+            if (deviceFound) "Placa encontrada, mas a conexão ou descoberta dos serviços BLE expirou."
+            else "Nenhum anúncio BeeLine encontrado. Confira se a placa está ligada e anunciando.",
+          )
         }
       }, 15_000)
     } catch (error: Exception) {

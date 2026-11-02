@@ -33,6 +33,11 @@ int main() {
   static_assert(COLOR_BACKGROUND == 0x2104, "Use neutral dark gray");
   static_assert(COLOR_BLACK == 0x0000, "Use black speed-scale backing");
   setup();
+  const auto* advertisingConfig = NimBLEDevice::getAdvertising();
+  assert(advertisingConfig->scanResponseEnabled);
+  assert(advertisingConfig->nameInAdvertisement.empty());
+  assert(advertisingConfig->nameInScanResponse == DEVICE_NAME);
+  assert(advertisingConfig->serviceUUID == SERVICE_UUID);
   loop();
   assert(orientationCheckActive && display.fullDraws == 1);
   assert(display.lastFillScreenColor == COLOR_BACKGROUND);
@@ -213,4 +218,5 @@ int main() {
   std::cout << "PASS: solid dark-gray rendering, black speed track and speed-panel-only refresh\n";
   std::cout << "PASS: refresh limit, r0-r3, diagnostic restoration, maneuvers and advertising restart\n";
   std::cout << "All host firmware checks passed (hardware APIs simulated).\n";
+  std::cout << "PASS: explicit service UUID and device name in scan response\n";
 }
