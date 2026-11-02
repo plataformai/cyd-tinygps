@@ -10,8 +10,8 @@
  *   Service:         7b1e0001-6d2a-4f7a-9c21-8e8a4b12a001
  *   Write command:   7b1e0002-6d2a-4f7a-9c21-8e8a4b12a001
  *
- * TFT wiring targets the common ESP32-2432S028R/CYD revision. Confirm your
- * board revision before powering the backlight; some revisions differ.
+ * TFT setup in the companion README matches the dual-USB ESP32-2432S028
+ * confirmed for this project. Check other board revisions before powering up.
  */
 
 #include <ArduinoJson.h>
@@ -20,6 +20,7 @@
 #include <freertos/FreeRTOS.h>
 #include <math.h>
 #include <limits.h>
+#include "beeline_background_renderer.h"
 
 static constexpr char DEVICE_NAME[] = "BeeLine-ESP32";
 static constexpr char SERVICE_UUID[] = "7b1e0001-6d2a-4f7a-9c21-8e8a4b12a001";
@@ -58,6 +59,9 @@ static constexpr uint16_t COLOR_MUTED = 0x9DB1;
 static constexpr uint16_t COLOR_GREEN = 0x36E6;
 static constexpr uint16_t COLOR_YELLOW = 0xF7E0;
 static constexpr uint16_t COLOR_RED = 0xF986;
+
+// The four-line transfer buffer is small and never allocates a screen sprite.
+static BeeLineBackgroundRenderer backgroundRenderer;
 
 struct NavigationInstruction {
   String maneuver;
@@ -173,7 +177,11 @@ void drawArrow(const String& maneuver) {
       COLOR_AMBER);
 }
 
-void drawSpeedPanel() {
+void drawBackground() {
+  backgroundRenderer.draw(display, COLOR_BACKGROUND);
+}
+
+void drawSpeedPanel(bool restoreBackground = true) {
   using namespace Layout;
   const int16_t width = display.width();
   const int16_t panelTop = PANEL_TOP;
@@ -182,16 +190,19 @@ void drawSpeedPanel() {
   const int16_t barY = BAR_Y;
   const int16_t barHeight = BAR_HEIGHT;
 
-  display.fillRect(0, panelTop, width, display.height() - panelTop, COLOR_BACKGROUND);
+  if (restoreBackground) {
+    backgroundRenderer.drawRegion(
+        display, panelTop, display.height() - panelTop, COLOR_BACKGROUND);
+  }
   display.drawFastHLine(MARGIN, panelTop, width - 2 * MARGIN, COLOR_SURFACE);
 
   display.setTextDatum(TL_DATUM);
-  display.setTextColor(COLOR_MUTED, COLOR_BACKGROUND);
+  display.setTextColor(COLOR_MUTED);
   display.drawString("VELOCIDADE", SPEED_LABEL_X, SPEED_LABEL_Y, 1);
-  display.setTextColor(speedAvailable ? COLOR_TEXT : COLOR_MUTED, COLOR_BACKGROUND);
+  display.setTextColor(speedAvailable ? COLOR_TEXT : COLOR_MUTED);
   display.drawString(speedAvailable ? String(static_cast<int>(roundf(currentSpeedKmh))) : "--",
                      SPEED_LABEL_X, SPEED_VALUE_Y, 4);
-  display.setTextColor(COLOR_MUTED, COLOR_BACKGROUND);
+  display.setTextColor(COLOR_MUTED);
   display.drawString("km/h", SPEED_UNIT_X, SPEED_UNIT_Y, 1);
 
   const int16_t mark50 = scaleX + static_cast<int16_t>(scaleWidth * float(GREEN_LIMIT) / SCALE_MAX);
@@ -206,7 +217,7 @@ void drawSpeedPanel() {
     display.drawFastVLine(x, barY - (special ? 7 : 4), barHeight + (special ? 14 : 8),
                           special ? COLOR_TEXT : COLOR_MUTED);
     display.setTextDatum(TC_DATUM);
-    display.setTextColor(special ? COLOR_TEXT : COLOR_MUTED, COLOR_BACKGROUND);
+    display.setTextColor(special ? COLOR_TEXT : COLOR_MUTED);
     display.drawString(String(value), x, SCALE_LABEL_Y, 1);
   }
 
@@ -223,10 +234,10 @@ void drawOrientationCheck(bool rotationTest) {
   const bool landscape = width == DISPLAY_LANDSCAPE_WIDTH &&
                          height == DISPLAY_LANDSCAPE_HEIGHT;
 
-  display.fillScreen(COLOR_BACKGROUND);
+  drawBackground();
   display.drawRect(0, 0, width, height, COLOR_AMBER);
   display.setTextDatum(TC_DATUM);
-  display.setTextColor(COLOR_AMBER, COLOR_BACKGROUND);
+  display.setTextColor(COLOR_AMBER);
   display.drawCentreString("BEELINE TFT", width / 2, height / 2 - 46, 2);
   String status;
   if (rotationTest) {
@@ -235,47 +246,46 @@ void drawOrientationCheck(bool rotationTest) {
   } else {
     status = landscape ? "LANDSCAPE OK" : "CHECK TFT SETUP";
   }
-  display.setTextColor(rotationTest || landscape ? COLOR_TEXT : COLOR_RED,
-                       COLOR_BACKGROUND);
+  display.setTextColor(rotationTest || landscape ? COLOR_TEXT : COLOR_RED);
   display.drawCentreString(status, width / 2, height / 2 - 14, 2);
-  display.setTextColor(COLOR_MUTED, COLOR_BACKGROUND);
+  display.setTextColor(COLOR_MUTED);
   display.drawCentreString(String(width) + " x " + String(height),
                            width / 2, height / 2 + 18, 2);
 }
 
 void drawIdleScreen() {
-  display.fillScreen(COLOR_BACKGROUND);
+  drawBackground();
   display.setTextDatum(TC_DATUM);
-  display.setTextColor(COLOR_AMBER, COLOR_BACKGROUND);
+  display.setTextColor(COLOR_AMBER);
   display.drawString("BEELINE", display.width() / 2, 25, 4);
-  display.setTextColor(COLOR_MUTED, COLOR_BACKGROUND);
+  display.setTextColor(COLOR_MUTED);
   display.drawCentreString("Aguardando instrucoes", display.width() / 2, 81, 2);
   display.drawRoundRect(28, 139, display.width() - 56, 51, 12, COLOR_SURFACE);
-  display.setTextColor(COLOR_TEXT, COLOR_BACKGROUND);
+  display.setTextColor(COLOR_TEXT);
   display.drawCentreString("Conecte pelo app Android", display.width() / 2, 157, 2);
-  drawSpeedPanel();
+  drawSpeedPanel(false);
 }
 
 void renderInstruction(const NavigationInstruction& instruction) {
-  display.fillScreen(COLOR_BACKGROUND);
+  drawBackground();
   display.setTextDatum(TC_DATUM);
-  display.setTextColor(COLOR_MUTED, COLOR_BACKGROUND);
+  display.setTextColor(COLOR_MUTED);
   display.drawString("PROXIMA DIRECAO", display.width() / 2, Layout::DIRECTION_Y, 2);
   drawArrow(instruction.maneuver);
 
   display.setTextDatum(MC_DATUM);
-  display.setTextColor(COLOR_TEXT, COLOR_BACKGROUND);
+  display.setTextColor(COLOR_TEXT);
   display.drawString(String(instruction.distanceMeters) + " m",
                      display.width() / 2, Layout::DISTANCE_Y, 4);
   if (instruction.road.length() > 0) {
-    display.setTextColor(COLOR_MUTED, COLOR_BACKGROUND);
+    display.setTextColor(COLOR_MUTED);
     String road = instruction.road;
     if (road.length() > Layout::ROAD_MAX_BYTES) {
       road = road.substring(0, Layout::ROAD_PREFIX_BYTES) + "...";
     }
     display.drawString(road, display.width() / 2, Layout::ROAD_Y, 2);
   }
-  drawSpeedPanel();
+  drawSpeedPanel(false);
 }
 
 void drawCurrentScreen() {

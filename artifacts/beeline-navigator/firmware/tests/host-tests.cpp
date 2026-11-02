@@ -33,12 +33,14 @@ int main() {
   setup();
   loop();
   assert(orientationCheckActive && display.fullDraws == 1);
+  assert(display.imageRows == 240);
   write(R"({"type":"navigation","maneuver":"slight_right","distanceMeters":350,"road":"Rua Haddock Lobo","timestamp":1761600000000})");
   write(R"({"type":"speed","speedKmh":72.4,"valid":true,"timestamp":1761600000000})");
   tick(1199);
   assert(orientationCheckActive && hasNavigationInstruction && speedAvailable && display.fullDraws == 1);
   tick(1);
   assert(!orientationCheckActive && display.fullDraws == 2);
+  assert(display.imageRows == 480);
   assert(currentInstruction.maneuver == "slight_right" && currentInstruction.distanceMeters == 350);
   const std::vector<int> expected = {0, 20, 40, 50, 60, 80, 100, 120, 140};
   assert(display.graduations == expected);
@@ -131,11 +133,13 @@ int main() {
   write(R"({"type":"speed","valid":true,"speedKmh":80})");
   loop();
   const int panels = display.panelDraws;
+  const int imageRowsBeforeSpeedRedraw = display.imageRows;
   write(R"({"type":"speed","valid":true,"speedKmh":81})");
   tick(20);
   assert(display.panelDraws == panels);
   tick(80);
   assert(display.panelDraws == panels + 1);
+  assert(display.imageRows == imageRowsBeforeSpeedRedraw + 47);
   const int unchanged = display.calls;
   write(R"({"type":"speed","valid":true,"speedKmh":81.01})"); tick();
   assert(display.calls == unchanged);

@@ -6,12 +6,14 @@ Este sketch cria um periférico BLE chamado `BeeLine-ESP32`, recebe cada instru�
 
 1. Instale o Arduino IDE e o suporte às placas ESP32.
 2. Instale as bibliotecas **NimBLE-Arduino 2.x**, **ArduinoJson 7.x** e **TFT_eSPI**.
-3. Configure o `User_Setup.h` do TFT_eSPI para o CYD comum:
+3. Para a placa do usuário (ESP32-2432S028 com revisão de dois conectores USB, já confirmada), configure o `User_Setup.h` do TFT_eSPI:
 
    ```cpp
-   #define ILI9341_DRIVER
+   #define ST7789_DRIVER
    #define TFT_WIDTH  240
    #define TFT_HEIGHT 320
+   #define TFT_RGB_ORDER TFT_BGR
+   #define TFT_INVERSION_OFF
    #define TFT_MISO 12
    #define TFT_MOSI 13
    #define TFT_SCLK 14
@@ -22,10 +24,10 @@ Este sketch cria um periférico BLE chamado `BeeLine-ESP32`, recebe cada instru�
    #define TFT_BACKLIGHT_ON HIGH
    ```
 
-4. Abra `beeline-esp32.ino`, selecione **ESP32 Dev Module** e envie o sketch. `display.setRotation()` é aplicado logo após `display.init()`. A tela de verificação aparece por 1,2 segundo sem bloquear a inicialização do BLE.
+4. Extraia `beeline-firmware.zip` inteiro e abra `beeline-esp32.ino` dentro da pasta extraída. Mantenha `beeline_background.h` ao lado do arquivo: ele é parte do sketch. Selecione **ESP32 Dev Module** e envie o sketch. `display.setRotation()` é aplicado no primeiro ciclo do loop. A tela de verificação aparece por 1,2 segundo sem bloquear a inicialização do BLE.
 5. Abra o monitor serial em `115200` baud. O resultado esperado inclui `BeeLine-ESP32 ready` e, na primeira passagem do loop com a rotação padrão `1`, `[INFO] Rotacao aplicada: 1 (Largura=320 Altura=240)`.
 6. Para testar a orientação sem recompilar, configure o monitor serial para **Nova linha** (ou **Ambos NL e CR**) e envie `r0`, `r1`, `r2` ou `r3`. O firmware mostra a rotação e a resolução selecionadas por 1,2 segundo, e depois restaura a tela de navegação ou espera. Em geral, `r0` e `r2` são retrato (240 x 320), enquanto `r1` e `r3` são paisagem (320 x 240); a posição visual pode variar conforme a montagem da placa. Escolha a orientação correta e altere `DEFAULT_DISPLAY_ROTATION` para esse valor antes de gravar a versão definitiva. O teste é temporário: reiniciar a placa restaura esse valor padrão.
-7. Se nenhuma rotação resultar em `320 x 240`, confira se `User_Setup_Select.h` seleciona o `User_Setup.h` que você editou, o driver e os pinos da revisão exata da placa. CS/DC trocados ou driver incorreto normalmente causam falha, imagem corrompida ou ausência de imagem; não são um mecanismo confiável de fallback para retrato. O firmware usa uma única instância global do display.
+7. Se nenhuma rotação resultar em `320 x 240`, confira se `User_Setup_Select.h` seleciona o `User_Setup.h` que você editou, o driver e os pinos da revisão exata da placa. A configuração acima corresponde à placa do usuário que já foi confirmada; outras revisões podem usar um controlador diferente. CS/DC trocados ou driver incorreto normalmente causam falha, imagem corrompida ou ausência de imagem; não são um mecanismo confiável de fallback para retrato. O firmware usa uma única instância global do display.
 
 ## Contrato BLE
 
@@ -59,12 +61,21 @@ Quando o GPS não fornece uma leitura válida, o app envia `{"type":"speed","spe
 - Uma seção crítica entre os núcleos protege somente cópias das estruturas fixas e flags. Strings dinâmicas, logs, estado visível e TFT pertencem ao loop principal. Cada passagem consome no máximo uma navegação, uma velocidade e 16 bytes seriais.
 - O painel normal é atualizado no máximo uma vez por 100 ms (10 Hz), somente quando necessário. Navegação compara ângulo visível, distância e texto truncado da via; velocidade compara disponibilidade, número arredondado e posição do marcador. Uma leitura repetida renova o prazo de validade sem forçar desenho.
 - Alterar somente a velocidade redesenha somente o painel inferior. Alterar a navegação ainda exige desenho da tela inteira; estas melhorias reduzem trabalho redundante, mas não prometem eliminar toda cintilação.
+- O fundo 320×240 fica em RGB565 dentro de `beeline_background.h`, na flash do ESP32. O firmware copia apenas quatro linhas por vez para um buffer de aproximadamente 2,5 KiB; não reserva um sprite/framebuffer de tela inteira em RAM. O restante da tela só é redesenhado quando uma instrução visível muda; uma alteração da velocidade repinta apenas a faixa inferior do fundo antes de desenhar a régua.
 - `r0`–`r3` continuam disponíveis. A última rotação completa recebida em uma passagem é aplicada pelo loop e mostra o diagnóstico por 1,2 segundo, fora do limite normal de atualização. Comandos longos são descartados até a próxima quebra de linha. Durante o diagnóstico, navegação e velocidade continuam sendo processadas sem substituir a tela temporária; ao terminar, a última navegação e a disponibilidade atual da velocidade são restauradas.
-- Coordenadas e limites do painel ficam em `Layout`. Não foi adotado sprite de tela inteira, buffer completo nem double buffering: isso exige medir a memória livre na placa com BLE ativo.
+- Coordenadas e limites do painel ficam em `Layout`. A imagem usa a mesma orientação horizontal da tela; o modo de diagnóstico em retrato preserva o fundo sólido para não recortar nem distorcer a arte.
 
 ## Display e variantes da placa
 
 O sketch desenha a seta, distância e nome da via em orientação horizontal. No canto inferior, mostra o valor atual e uma régua colorida de 0 a 140 km/h, com graduações de 20 em 20 e marcações destacadas em 50 e 100 km/h. O indicador visual fica limitado à escala; o número mostra a velocidade recebida. O pinout acima é para a revisão comum da ESP32-2432S028 (CYD); clones e revisões podem usar outro GPIO de backlight ou reset. Se o display ficar apagado, confira a revisão da placa e ajuste o `User_Setup.h` e `TFT_BACKLIGHT_PIN` antes de tentar outra configuração.
+
+### Fundo personalizado e download para build local
+
+O fundo fornecido, já no tamanho nativo de 320×240, é escurecido levemente e armazenado como pixels RGB565 na flash. Ele acrescenta **150 KiB à imagem do firmware** e usa um buffer de transferência de cerca de **2,5 KiB de RAM**. Os textos ficam transparentes sobre a arte; seta, distância e régua são desenhadas por cima. A atualização só transfere o fundo quando a tela muda, ou a parte inferior quando é necessário repintar a velocidade.
+
+**Não baixe somente o `.ino`.** O sketch usa `beeline_background_renderer.h`, que desenha em blocos, e `beeline_background.h`, que contém os pixels convertidos. Para compilar localmente, baixe `beeline-firmware.zip`, extraia todos os arquivos e abra `beeline-esp32.ino` no Arduino IDE. Mantenha os dois headers ao lado do `.ino`. O ZIP mantém também o PNG original e este README. Não é necessária outra biblioteca Arduino além de **NimBLE-Arduino 2.x, ArduinoJson 7.x e TFT_eSPI** já usadas pelo firmware. Configure o `User_Setup.h` do display como antes e compile/grave normalmente.
+
+`assets/background.png` é o original. Se substituir a imagem, preserve 320×240. Na raiz do monorepo, execute `python3 artifacts/beeline-navigator/firmware/tools/generate-background.py`; dentro da pasta extraída do ZIP, execute `python3 tools/generate-background.py`. Ambos regeneram `beeline_background.h`. O gerador de desenvolvimento precisa do ImageMagick; ele não é necessário para abrir ou compilar o ZIP já preparado.
 
 ## App Android e validação ponta a ponta
 
@@ -88,9 +99,11 @@ O preview web e o Expo Go não incluem código Android customizado. Para testar 
 
 O preview web não acessa BLE, notificações Android nem localização em segundo plano. A build e o fluxo com hardware precisam ser executados em um telefone e numa ESP32-2432S028 físicos; o código do firmware não altera hardware, display ou caixa.
 
-### Verificações locais executadas nesta alteração
+### Verificações disponíveis e limite desta alteração
 
-Foi compilado e executado o **sketch de produção** com `g++`, C++17, `-Wall -Wextra -Werror -pedantic`, usando **ArduinoJson 7.4.2 real** e interfaces simuladas de Arduino, FreeRTOS, NimBLE e TFT. Não é uma compilação para ESP32 nem uma simulação elétrica ou de concorrência real entre núcleos.
+O cabeçalho RGB565 gerado foi compilado com `g++` em modo de aviso estrito e conferido para 320×240 pixels. O pacote foi inspecionado para garantir que contém o `.ino`, o header de imagem e a configuração de placa documentada.
+
+A suíte de testes do sketch usa `ArduinoJson` 7.x e interfaces simuladas de Arduino, FreeRTOS, NimBLE e TFT. **Nesta alteração, ela não pôde ser executada neste ambiente porque não havia uma cópia de ArduinoJson disponível.** Da mesma forma, não foi compilado nem gravado um binário para ESP32, nem medidos heap e latência na placa. Os testes de hardware ainda precisam ser feitos no CYD.
 
 Para repetir, use uma cópia externa de ArduinoJson 7.x (não é necessário adicioná-la ao repositório):
 
@@ -101,7 +114,15 @@ ARDUINOJSON_DIR=/caminho/para/ArduinoJson \
 
 O diretório indicado deve conter `src/ArduinoJson.h`. O teste não baixa dependências automaticamente; usa `g++` disponível ou a variável `CXX`.
 
-Casos verificados:
+O desenho do fundo tem um teste separado, que não precisa de ArduinoJson:
+
+```sh
+bash artifacts/beeline-navigator/firmware/tests/run-background-tests.sh
+```
+
+Ele verifica a transferência RGB565 em blocos, a atualização parcial da régua, o recorte das linhas e o fallback sem imagem em retrato.
+
+Casos cobertos pela suíte completa:
 
 - Pacotes vazios, 181 bytes, JSON malformado, tipos incorretos, campos obrigatórios ausentes, NULs embutidos, dados após o objeto e profundidade seis são rejeitados sem alterar o último estado válido. Os limites de exatamente 180 bytes e profundidade cinco são aceitos.
 - Uma navegação seguida de 10.000 velocidades continua disponível; cada posição pendente mantém somente a última mensagem válida de seu tipo. Um pacote rejeitado não limpa navegação pendente.
