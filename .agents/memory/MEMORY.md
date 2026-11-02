@@ -1,2 +1,2 @@
-- [Diagnóstico físico BeeLine](beeline-hardware.md) — preservar ST7789/BGR validado; desvios de cor RGB565 exigem testes específicos na placa.
+- [Diagnóstico físico BeeLine](beeline-hardware.md) — preservar ST7789/BGR validado; alterações no display devem evitar regressões de orientação e pinagem.
 - [Distribuição Android](beeline-distribution.md) — preservar o app original; ZIP EAS independente, achatado e sem lockfiles.

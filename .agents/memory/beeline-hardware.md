@@ -17,10 +17,3 @@ A placa fotografada é marcada ESP32-2432S028 e possui USB-C e micro-USB. O usu�
 
 **How to apply:** Para novas alterações nesta placa específica, preservar o setup que resolveu o display e não voltar ao ILI9341 nem sugerir troca de fios sem evidência nova. Isso não prova que todas as placas ESP32-2432S028 tenham o mesmo controlador.
 
-## Fidelidade de cor do fundo
-
-Preservar os tons escuros verde-musgo da imagem de fundo original do usuário. Investigar a conversão RGB565 e a ordem dos bytes/canais no envio com `pushImage` antes de alterar os pixels ou o setup global do display. A configuração ST7789/BGR já confirmada não deve ser trocada para compensar um possível problema específico do bitmap.
-
-**Why:** O usuário observou que a imagem renderizada ficou rosa e pediu para preservar os tons escuros da imagem enviada.
-
-**How to apply:** Comparar pixels RGB conhecidos da fonte com o resultado RGB565 e testar a transferência no display; alterar somente o caminho de desenho do fundo. Diferenciar a conversão local da confirmação visual, que depende da placa física.
