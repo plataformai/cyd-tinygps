@@ -20,8 +20,6 @@
 #include <freertos/FreeRTOS.h>
 #include <math.h>
 #include <limits.h>
-#include "beeline_background_renderer.h"
-#include "beeline_color_test.h"
 
 static constexpr char DEVICE_NAME[] = "BeeLine-ESP32";
 static constexpr char SERVICE_UUID[] = "7b1e0001-6d2a-4f7a-9c21-8e8a4b12a001";
@@ -42,6 +40,7 @@ constexpr int16_t MARGIN = 12;
 constexpr int16_t SCALE_X = 96;
 constexpr int16_t BAR_Y = 207;
 constexpr int16_t BAR_HEIGHT = 10;
+constexpr int16_t SCALE_BACKING_PADDING = 4;
 constexpr int16_t SPEED_LABEL_X = 13, SPEED_LABEL_Y = 196;
 constexpr int16_t SPEED_VALUE_Y = 204, SPEED_UNIT_X = 15, SPEED_UNIT_Y = 232;
 constexpr int16_t SCALE_LABEL_Y = 222;
@@ -52,17 +51,15 @@ constexpr float SHAFT_HALF_WIDTH = 7, HEAD_HALF_WIDTH = 18;
 constexpr int16_t DIRECTION_Y = 5, DISTANCE_Y = 137, ROAD_Y = 171;
 constexpr unsigned int ROAD_MAX_BYTES = 27, ROAD_PREFIX_BYTES = 24;
 }
-static constexpr uint16_t COLOR_BACKGROUND = 0x1124;
+static constexpr uint16_t COLOR_BACKGROUND = 0x2104;  // neutral dark gray
 static constexpr uint16_t COLOR_SURFACE = 0x1A2C;
+static constexpr uint16_t COLOR_BLACK = 0x0000;
 static constexpr uint16_t COLOR_AMBER = 0xF6A8;
 static constexpr uint16_t COLOR_TEXT = 0xFFFF;
 static constexpr uint16_t COLOR_MUTED = 0x9DB1;
 static constexpr uint16_t COLOR_GREEN = 0x36E6;
 static constexpr uint16_t COLOR_YELLOW = 0xF7E0;
 static constexpr uint16_t COLOR_RED = 0xF986;
-
-// The four-line transfer buffer is small and never allocates a screen sprite.
-static BeeLineBackgroundRenderer backgroundRenderer;
 
 struct NavigationInstruction {
   String maneuver;
@@ -87,9 +84,6 @@ bool speedPanelDirty = true;
 uint32_t lastScreenUpdateMs = 0;
 int8_t pendingRotation = DEFAULT_DISPLAY_ROTATION;
 bool pendingRotationTest = false;
-bool pendingColorTest = false;
-bool colorTestActive = false;
-uint32_t colorTestStartedMs = 0;
 
 // Two independent, fixed-size latest-wins mailboxes. Speed bursts cannot evict
 // navigation. Only POD copies happen under this cross-core critical section:
@@ -182,7 +176,7 @@ void drawArrow(const String& maneuver) {
 }
 
 void drawBackground() {
-  backgroundRenderer.draw(display, COLOR_BACKGROUND);
+  display.fillScreen(COLOR_BACKGROUND);
 }
 
 void drawSpeedPanel(bool restoreBackground = true) {
@@ -195,8 +189,7 @@ void drawSpeedPanel(bool restoreBackground = true) {
   const int16_t barHeight = BAR_HEIGHT;
 
   if (restoreBackground) {
-    backgroundRenderer.drawRegion(
-        display, panelTop, display.height() - panelTop, COLOR_BACKGROUND);
+    display.fillRect(0, panelTop, width, display.height() - panelTop, COLOR_BACKGROUND);
   }
   display.drawFastHLine(MARGIN, panelTop, width - 2 * MARGIN, COLOR_SURFACE);
 
@@ -209,6 +202,12 @@ void drawSpeedPanel(bool restoreBackground = true) {
   display.setTextColor(COLOR_MUTED);
   display.drawString("km/h", SPEED_UNIT_X, SPEED_UNIT_Y, 1);
 
+  // Leave a visible black border around the colored speed bands.
+  display.fillRect(scaleX - SCALE_BACKING_PADDING,
+                   barY - SCALE_BACKING_PADDING,
+                   scaleWidth + 2 * SCALE_BACKING_PADDING,
+                   barHeight + 2 * SCALE_BACKING_PADDING,
+                   COLOR_BLACK);
   const int16_t mark50 = scaleX + static_cast<int16_t>(scaleWidth * float(GREEN_LIMIT) / SCALE_MAX);
   const int16_t mark100 = scaleX + static_cast<int16_t>(scaleWidth * float(YELLOW_LIMIT) / SCALE_MAX);
   display.fillRect(scaleX, barY, mark50 - scaleX, barHeight, COLOR_GREEN);
@@ -319,10 +318,6 @@ void applyDisplayRotation(uint8_t rotation, bool rotationTest) {
 }
 
 void handleSerialCommand() {
-  if (serialCommandLength == 1 && serialCommand[0] == 'c') {
-    pendingColorTest = true;
-    return;
-  }
   if (serialCommandLength == 2 && serialCommand[0] == 'r' &&
       serialCommand[1] >= '0' && serialCommand[1] <= '3') {
     pendingRotation = static_cast<int8_t>(serialCommand[1] - '0');
@@ -330,7 +325,7 @@ void handleSerialCommand() {
     return;
   }
 
-  Serial.println("Comando serial invalido. Use r0, r1, r2, r3 ou c (cores).");
+  Serial.println("Comando serial invalido. Use r0, r1, r2 ou r3.");
 }
 
 void pollSerialCommands() {
@@ -349,7 +344,7 @@ void pollSerialCommands() {
       serialCommand[serialCommandLength++] = character;
     } else {
       serialCommandOverflow = true;
-      Serial.println("Comando longo demais. Use r0, r1, r2, r3 ou c (cores).");
+      Serial.println("Comando longo demais. Use r0, r1, r2 ou r3.");
     }
   }
 }
@@ -501,7 +496,6 @@ void setup() {
   advertising->start();
   Serial.printf("%s ready; waiting for Android BLE connection\n", DEVICE_NAME);
   Serial.println("Teste de rotacao: envie r0, r1, r2 ou r3 com Nova linha.");
-  Serial.println("Teste de cores: envie c com Nova linha (30 segundos).");
 }
 
 void loop() {
@@ -510,37 +504,15 @@ void loop() {
   uint32_t now = millis();
 
   if (pendingRotation >= 0) {
-    colorTestActive = false;
     applyDisplayRotation(static_cast<uint8_t>(pendingRotation), pendingRotationTest);
     pendingRotation = -1;
     screenDirty = true;
     now = millis();  // Rotation drawing may advance the clock.
   }
-  if (pendingColorTest) {
-    pendingColorTest = false;
-    if (display.width() == DISPLAY_LANDSCAPE_WIDTH &&
-        display.height() == DISPLAY_LANDSCAPE_HEIGHT) {
-      orientationCheckActive = false;
-      BeeLineColorTest::draw(display);
-      colorTestActive = true;
-      colorTestStartedMs = millis();
-      now = colorTestStartedMs;
-      Serial.println("[CORES] DIRETO=fillRect; PUSH NORMAL=swap false; PUSH SWAP=swap true.");
-      Serial.println("[CORES] Fotografe a tela e compare as tres colunas. Volta em 30s.");
-    } else {
-      Serial.println("[CORES] Use r1 ou r3 para 320x240 e depois envie c.");
-    }
-  }
   if (orientationCheckActive &&
       static_cast<uint32_t>(now - orientationCheckStartedMs) >= DISPLAY_ORIENTATION_CHECK_MS) {
     orientationCheckActive = false;
     screenDirty = true;
-  }
-  if (colorTestActive &&
-      static_cast<uint32_t>(now - colorTestStartedMs) >= BeeLineColorTest::DURATION_MS) {
-    colorTestActive = false;
-    screenDirty = true;
-    Serial.println("[CORES] Teste encerrado; restaurando navegacao.");
   }
 
   if (speedAvailable && static_cast<uint32_t>(now - lastSpeedUpdateMs) >= SPEED_TIMEOUT_MS) {
@@ -549,7 +521,7 @@ void loop() {
     speedPanelDirty = true;
     Serial.println("SPEED=stale");
   }
-  if (!orientationCheckActive && !colorTestActive &&
+  if (!orientationCheckActive &&
       static_cast<uint32_t>(now - lastScreenUpdateMs) >= SCREEN_UPDATE_INTERVAL_MS &&
       (screenDirty || speedPanelDirty)) {
     if (screenDirty) drawCurrentScreen();

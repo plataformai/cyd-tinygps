@@ -30,17 +30,19 @@ static void reject(const std::string& raw) {
   assert(display.calls == draws);
 }
 int main() {
+  static_assert(COLOR_BACKGROUND == 0x2104, "Use neutral dark gray");
+  static_assert(COLOR_BLACK == 0x0000, "Use black speed-scale backing");
   setup();
   loop();
   assert(orientationCheckActive && display.fullDraws == 1);
-  assert(display.imageRows == 240);
+  assert(display.lastFillScreenColor == COLOR_BACKGROUND);
   write(R"({"type":"navigation","maneuver":"slight_right","distanceMeters":350,"road":"Rua Haddock Lobo","timestamp":1761600000000})");
   write(R"({"type":"speed","speedKmh":72.4,"valid":true,"timestamp":1761600000000})");
   tick(1199);
   assert(orientationCheckActive && hasNavigationInstruction && speedAvailable && display.fullDraws == 1);
   tick(1);
   assert(!orientationCheckActive && display.fullDraws == 2);
-  assert(display.imageRows == 480);
+  assert(display.lastFillScreenColor == COLOR_BACKGROUND);
   assert(currentInstruction.maneuver == "slight_right" && currentInstruction.distanceMeters == 350);
   const std::vector<int> expected = {0, 20, 40, 50, 60, 80, 100, 120, 140};
   assert(display.graduations == expected);
@@ -133,13 +135,28 @@ int main() {
   write(R"({"type":"speed","valid":true,"speedKmh":80})");
   loop();
   const int panels = display.panelDraws;
-  const int imageRowsBeforeSpeedRedraw = display.imageRows;
+  const size_t rectanglesBeforeSpeedRedraw = display.rectangles.size();
   write(R"({"type":"speed","valid":true,"speedKmh":81})");
   tick(20);
   assert(display.panelDraws == panels);
   tick(80);
   assert(display.panelDraws == panels + 1);
-  assert(display.imageRows == imageRowsBeforeSpeedRedraw + 47);
+  bool restoredDarkGray = false;
+  bool blackSpeedTrack = false;
+  for (size_t i = rectanglesBeforeSpeedRedraw; i < display.rectangles.size(); ++i) {
+    const auto& rectangle = display.rectangles[i];
+    restoredDarkGray |= rectangle.x == 0 && rectangle.y == Layout::PANEL_TOP &&
+        rectangle.width == display.width() &&
+        rectangle.height == display.height() - Layout::PANEL_TOP &&
+        rectangle.color == COLOR_BACKGROUND;
+    blackSpeedTrack |= rectangle.x == Layout::SCALE_X - Layout::SCALE_BACKING_PADDING &&
+        rectangle.y == Layout::BAR_Y - Layout::SCALE_BACKING_PADDING &&
+        rectangle.width == display.width() - Layout::SCALE_X - Layout::MARGIN +
+                               2 * Layout::SCALE_BACKING_PADDING &&
+        rectangle.height == Layout::BAR_HEIGHT + 2 * Layout::SCALE_BACKING_PADDING &&
+        rectangle.color == COLOR_BLACK;
+  }
+  assert(restoredDarkGray && blackSpeedTrack);
   const int unchanged = display.calls;
   write(R"({"type":"speed","valid":true,"speedKmh":81.01})"); tick();
   assert(display.calls == unchanged);
@@ -193,24 +210,7 @@ int main() {
   server->callbacks->onDisconnect(server, info, 0);
   assert(NimBLEDevice::getAdvertising()->starts == advertising + 1);
   assert(hasNavigationInstruction);
-  Serial.send("c\n"); loop();
-  assert(colorTestActive && !orientationCheckActive && !display.getSwapBytes());
-  const int colorScreenDraws = display.fullDraws;
-  write(R"({"type":"navigation","maneuver":"left","road":"Durante teste de cores"})");
-  write(R"({"type":"speed","valid":true,"speedKmh":50})");
-  tick(BeeLineColorTest::DURATION_MS - 1);
-  assert(colorTestActive && display.fullDraws == colorScreenDraws);
-  assert(currentInstruction.road == "Durante teste de cores");
-  tick(1);
-  assert(!colorTestActive && display.fullDraws == colorScreenDraws + 1);
-  Serial.send("c\n"); loop(); assert(colorTestActive);
-  Serial.send("r3\n"); loop();
-  assert(!colorTestActive && orientationCheckActive && activeDisplayRotation == 3);
-  tick(1200);
-  Serial.send("r0\n"); loop();
-  Serial.send("c\n"); loop();
-  assert(!colorTestActive); // Do not crop the 320x240 comparison in portrait.
-  std::cout << "PASS: color diagnostic, BLE processing, timeout restoration and rotation exit\n";
+  std::cout << "PASS: solid dark-gray rendering, black speed track and speed-panel-only refresh\n";
   std::cout << "PASS: refresh limit, r0-r3, diagnostic restoration, maneuvers and advertising restart\n";
   std::cout << "All host firmware checks passed (hardware APIs simulated).\n";
 }

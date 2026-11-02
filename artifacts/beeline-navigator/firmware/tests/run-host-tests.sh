@@ -9,4 +9,3 @@ trap 'rm -rf "$build"' EXIT
   -I"$here/stubs" -I"$ARDUINOJSON_DIR/src" \
   "$here/host-tests.cpp" -o "$build/host-tests"
 "$build/host-tests"
-bash "$here/run-background-tests.sh"

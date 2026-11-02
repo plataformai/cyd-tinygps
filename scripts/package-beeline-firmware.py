@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create the standalone Arduino download with its required image header."""
+"""Create the standalone Arduino firmware download."""
 
 from pathlib import Path
 import zipfile
@@ -9,13 +9,7 @@ FIRMWARE = ROOT / "artifacts/beeline-navigator/firmware"
 OUTPUT_DIR = ROOT / "generated-artifacts"
 FILES = (
     "beeline-esp32.ino",
-    "beeline_background.h",
-    "beeline_background_renderer.h",
-    "beeline_color_test.h",
     "README.md",
-    "assets/background.png",
-    "assets/README.md",
-    "tools/generate-background.py",
 )
 
 
