@@ -25,3 +25,9 @@ Os primeiros testes mostraram o UUID BeeLine sem nome visível, sem distinguir a
 
 **How to apply:** Separar UUID anunciado de UUID descoberto após conexão. Priorizar versão efetivamente instalada, permissões e scanner do app no diagnóstico atual; não apresentar a conexão pelo nRF como prova de funcionamento do app BeeLine.
 
+Depois de desconectar e forçar a parada do nRF Connect, conferir Bluetooth/Localização e permissões do BeeLine, reiniciar a ESP32 e tentar novamente, o usuário confirmou que a conexão pelo app funcionou. Não foi identificado qual passo isolado resolveu.
+
+**Why:** A conexão da placa no nRF Connect pode impedir ou interferir na busca subsequente do app, e as permissões/configurações do Android também são variáveis relevantes.
+
+**How to apply:** Se a placa aparece e conecta pelo nRF Connect, mas o BeeLine não a encontra, primeiro desconectar e forçar parada do scanner, verificar permissões e Localização e reiniciar a placa antes de gerar outro APK ou firmware.
+
