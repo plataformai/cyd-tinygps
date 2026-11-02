@@ -3,7 +3,6 @@ package expo.modules.beeline
 import android.content.Intent
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
-import org.json.JSONArray
 import org.json.JSONObject
 
 class BeeLineNotificationListenerService : NotificationListenerService() {
@@ -15,14 +14,62 @@ class BeeLineNotificationListenerService : NotificationListenerService() {
     private const val MAPS_PACKAGE = "com.google.android.apps.maps"
   }
 
+  override fun onListenerConnected() {
+    super.onListenerConnected()
+    refreshLatestMapsNotification()
+  }
+
   override fun onNotificationPosted(sbn: StatusBarNotification) {
     if (sbn.packageName != MAPS_PACKAGE) return
+    saveMapsNotification(sbn)
+  }
+
+  override fun onNotificationRemoved(sbn: StatusBarNotification) {
+    if (sbn.packageName != MAPS_PACKAGE) return
+    val preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+    val current = preferences.getString(LATEST_NOTIFICATION_KEY, null)
+    val removedCurrent = try {
+      current != null && JSONObject(current).optString("notificationKey") == sbn.key
+    } catch (_: Exception) {
+      false
+    }
+    if (!removedCurrent) return
+
+    val replacement = activeMapsNotifications()
+      .filterNot { it.key == sbn.key }
+      .maxByOrNull { it.postTime }
+    if (replacement != null) saveMapsNotification(replacement)
+    else preferences.edit().remove(LATEST_NOTIFICATION_KEY).apply()
+  }
+
+  private fun refreshLatestMapsNotification() {
+    val latest = activeMapsNotifications().maxByOrNull { it.postTime }
+    val preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+    if (latest == null) {
+      preferences.edit().remove(LATEST_NOTIFICATION_KEY).apply()
+    } else {
+      saveMapsNotification(latest)
+    }
+  }
+
+  private fun activeMapsNotifications(): List<StatusBarNotification> {
+    return try {
+      activeNotifications
+        ?.filter { it.packageName == MAPS_PACKAGE }
+        .orEmpty()
+    } catch (_: SecurityException) {
+      emptyList()
+    }
+  }
+
+  private fun saveMapsNotification(sbn: StatusBarNotification) {
     val extras = sbn.notification.extras
     val lines = extras.getCharSequenceArray(android.app.Notification.EXTRA_TEXT_LINES)
       ?.joinToString(" · ") { it.toString() }
       .orEmpty()
     val notification = JSONObject().apply {
       put("packageName", sbn.packageName)
+      put("notificationKey", sbn.key)
       put("title", extras.getCharSequence(android.app.Notification.EXTRA_TITLE)?.toString().orEmpty())
       put("text", extras.getCharSequence(android.app.Notification.EXTRA_TEXT)?.toString().orEmpty())
       put("bigText", extras.getCharSequence(android.app.Notification.EXTRA_BIG_TEXT)?.toString().orEmpty())
@@ -40,13 +87,5 @@ class BeeLineNotificationListenerService : NotificationListenerService() {
         .setPackage(packageName)
         .putExtra(EXTRA_NOTIFICATION, serialized),
     )
-  }
-
-  override fun onNotificationRemoved(sbn: StatusBarNotification) {
-    if (sbn.packageName != MAPS_PACKAGE) return
-    getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-      .edit()
-      .remove(LATEST_NOTIFICATION_KEY)
-      .apply()
   }
 }

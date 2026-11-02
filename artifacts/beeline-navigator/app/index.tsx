@@ -40,7 +40,7 @@ export default function HomeScreen() {
   const [connectionMessage, setConnectionMessage] = useState('Desconectado');
   const [notificationEnabled, setNotificationEnabled] = useState(false);
   const [liveTurn, setLiveTurn] = useState<Turn | null>(null);
-  const [notificationStatus, setNotificationStatus] = useState('Aguardando instrução compatível do Maps.');
+  const [notificationStatus, setNotificationStatus] = useState('Ainda não recebi uma notificação do Google Maps.');
   const [operationError, setOperationError] = useState('');
   const [sendingTest, setSendingTest] = useState(false);
   const [speedKmh, setSpeedKmh] = useState<number | null>(null);
@@ -51,6 +51,8 @@ export default function HomeScreen() {
   const lastSpeedFixAtRef = useRef(0);
   const isConnected = connectionState === 'connected';
   const message = makeNavigationCommand(diagnosticTurn, 1761600000000);
+  const notificationNotParsed = notificationStatus.includes('sem manobra compatível');
+  const notificationNotReceived = notificationStatus.startsWith('Nenhuma notificação');
 
   const refreshNotifications = useCallback(async () => {
     if (!BeeLineAndroid.available) return;
@@ -66,7 +68,7 @@ export default function HomeScreen() {
       if (!notification) {
         lastNotificationRef.current = '';
         setLiveTurn(null);
-        setNotificationStatus('Aguardando instrução compatível do Maps.');
+        setNotificationStatus('Nenhuma notificação do Maps recebida. Com uma rota ativa, confira a central de notificações do celular.');
         return;
       }
       const key = `${notification.postedAt}:${notification.title}:${notification.text}:${notification.bigText}`;
@@ -428,8 +430,20 @@ export default function HomeScreen() {
           ) : (
             <View style={styles.emptyInstruction}>
               <MaterialCommunityIcons name="map-marker-path" size={34} color={colors.primary} />
-              <Text style={[styles.turnLabel, { color: colors.card }]}>Inicie uma rota no Google Maps</Text>
-              <Text style={[styles.emptyHint, { color: colors.mutedForeground }]}>A próxima manobra compatível aparecerá aqui.</Text>
+              <Text style={[styles.turnLabel, { color: colors.card }]}>
+                {notificationNotParsed
+                  ? 'Notificação do Maps não reconhecida'
+                  : notificationNotReceived
+                    ? 'Aguardando instrução do Maps'
+                    : 'Inicie uma rota no Google Maps'}
+              </Text>
+              <Text style={[styles.emptyHint, { color: colors.mutedForeground }]}>
+                {notificationNotParsed
+                  ? 'O Android entregou uma notificação, mas o app não identificou a manobra.'
+                  : notificationNotReceived
+                    ? 'Com uma rota ativa, confira se o Maps publicou uma notificação na central do celular.'
+                    : 'A próxima manobra compatível aparecerá aqui.'}
+              </Text>
             </View>
           )}
         </View>
