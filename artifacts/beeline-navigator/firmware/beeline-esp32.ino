@@ -492,9 +492,16 @@ void setup() {
   service->start();
 
   NimBLEAdvertising* advertising = NimBLEDevice::getAdvertising();
-  advertising->addServiceUUID(SERVICE_UUID);
-  advertising->start();
-  Serial.printf("%s ready; waiting for Android BLE connection\n", DEVICE_NAME);
+  advertising->enableScanResponse(true);
+  const bool nameAdded = advertising->setName(DEVICE_NAME);
+  const bool serviceAdded = advertising->addServiceUUID(SERVICE_UUID);
+  if (!nameAdded || !serviceAdded) {
+    Serial.println("[BLE] Failed to configure advertising name or service UUID");
+  } else if (!advertising->start()) {
+    Serial.println("[BLE] Failed to start advertising");
+  } else {
+    Serial.printf("%s ready; advertising and waiting for Android BLE connection\n", DEVICE_NAME);
+  }
   Serial.println("Teste de rotacao: envie r0, r1, r2 ou r3 com Nova linha.");
 }
 

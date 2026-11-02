@@ -30,8 +30,18 @@ struct NimBLEServer {
 };
 struct NimBLEAdvertising {
   int starts = 0;
-  void addServiceUUID(const char*) {}
-  void start() { ++starts; }
+  bool scanResponseEnabled = false;
+  std::string nameInAdvertisement;
+  std::string nameInScanResponse;
+  std::string serviceUUID;
+  void enableScanResponse(bool enabled) { scanResponseEnabled = enabled; }
+  bool setName(const char* value) {
+    if (scanResponseEnabled) nameInScanResponse = value;
+    else nameInAdvertisement = value;
+    return true;
+  }
+  bool addServiceUUID(const char* value) { serviceUUID = value; return true; }
+  bool start() { ++starts; return true; }
 };
 namespace NIMBLE_PROPERTY { constexpr int WRITE = 1, WRITE_NR = 2; }
 struct NimBLEDevice {
