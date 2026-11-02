@@ -42,3 +42,101 @@ mtime_ms = 1793621344756
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/c0fa0340-b2fd-4e6c-8bac-2e2991c89d50"
 storage_version_token = "1793621403683396"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "BmMPvu6OJ0iBEaktHqkFb"
+uri = "file://generated-artifacts/beeline-scenarios/contato.png"
+type = "image"
+title = "BeeLine ESP32 — seis cenários"
+description = "Prancha comparativa das seis manobras reconhecidas pelo app, renderizada a partir do layout atual do firmware."
+logical_id = "cfd75530-5f4e-446c-b351-9fd9375e1fc0"
+content_hash = "sha256:6d9aa4cecba28732e8bd43715c582ca4265bfa88522328cb933c699eaebfd31a"
+size = 69371
+mtime_ms = 1793652890487
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/cfd75530-5f4e-446c-b351-9fd9375e1fc0/f85855d2-84da-470a-92e8-32248f2ac3d7"
+storage_version_token = "1793652916845408"
+content_type = "image/png"
+
+[[outputs]]
+id = "JuVwp463pr-b7oUyODds7"
+uri = "file://generated-artifacts/beeline-scenarios/straight.png"
+type = "image"
+title = "Tela ESP32 — seguir em frente"
+description = "Prévia 320 × 240 do layout atual: seta para frente, distância ilustrativa, via e escala de velocidade."
+logical_id = "7b4411e2-fc9c-45a9-b0ee-9f133155b78d"
+content_hash = "sha256:a11dd63fabe4f69b2584430cc26daaff7ed459f4f954b42ff33f98cae0a869cf"
+size = 12149
+mtime_ms = 1793652892071
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/7b4411e2-fc9c-45a9-b0ee-9f133155b78d/e51cedc8-6ed4-42a7-8676-63c1b5584f4a"
+storage_version_token = "1793652917474577"
+content_type = "image/png"
+
+[[outputs]]
+id = "jzx-6saY793ubQXi7fd1w"
+uri = "file://generated-artifacts/beeline-scenarios/slight-left.png"
+type = "image"
+title = "Tela ESP32 — manter à esquerda"
+description = "Prévia 320 × 240 do layout atual para a manobra slight_left."
+logical_id = "954205a8-3e90-4199-8166-57f3eb344462"
+content_hash = "sha256:afa14755b634259f1cb5194077edeb8f36e7c98f86e4d2bc0eb6fa9d846c6664"
+size = 12982
+mtime_ms = 1793652891451
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/954205a8-3e90-4199-8166-57f3eb344462/28c425c6-3125-4d4b-aea3-ce92a78834dd"
+storage_version_token = "1793652918264944"
+content_type = "image/png"
+
+[[outputs]]
+id = "m4XfyXR-mxwaY_PFcooHL"
+uri = "file://generated-artifacts/beeline-scenarios/left.png"
+type = "image"
+title = "Tela ESP32 — virar à esquerda"
+description = "Prévia 320 × 240 do layout atual para a manobra left."
+logical_id = "33cba326-46f2-4389-989b-a8113e0db8c8"
+content_hash = "sha256:f228edf740c87bfde7fbf090a55745fd5b105356a9cdb54856b8a2bd9354c161"
+size = 12257
+mtime_ms = 1793652890811
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/33cba326-46f2-4389-989b-a8113e0db8c8/681ceffa-8508-41f7-b41f-c762f4e6747f"
+storage_version_token = "1793652918873751"
+content_type = "image/png"
+
+[[outputs]]
+id = "ufmWHjsVFpPiK1oSjKC3I"
+uri = "file://generated-artifacts/beeline-scenarios/slight-right.png"
+type = "image"
+title = "Tela ESP32 — manter à direita"
+description = "Prévia 320 × 240 do layout atual para a manobra slight_right."
+logical_id = "56649faa-04ec-435b-ae7f-93f48d9037b4"
+content_hash = "sha256:c675a50bebccf338cb8a0f05639685dad61a66c7d89106867976b54f1825e963"
+size = 12896
+mtime_ms = 1793652891763
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/56649faa-04ec-435b-ae7f-93f48d9037b4/f63b702e-c9f4-4e4b-9f25-11211b7b9c59"
+storage_version_token = "1793652919492014"
+content_type = "image/png"
+
+[[outputs]]
+id = "PDy3a-KPz8wc6pW8UT-Mm"
+uri = "file://generated-artifacts/beeline-scenarios/right.png"
+type = "image"
+title = "Tela ESP32 — virar à direita"
+description = "Prévia 320 × 240 do layout atual para a manobra right."
+logical_id = "08c0e91b-dffd-4500-9e5b-38cf19140be4"
+content_hash = "sha256:e2badf6a9df3db1753d250dad028861db31bc753b144d5ced1002337c1c56c48"
+size = 12264
+mtime_ms = 1793652891123
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/08c0e91b-dffd-4500-9e5b-38cf19140be4/3035ce6f-3037-49ef-9ba8-3a8309f93556"
+storage_version_token = "1793652920077731"
+content_type = "image/png"
+
+[[outputs]]
+id = "AOLUXvQkbFX4ddbQteqkU"
+uri = "file://generated-artifacts/beeline-scenarios/uturn.png"
+type = "image"
+title = "Tela ESP32 — retorno"
+description = "Prévia 320 × 240 do firmware atual. A seta descendente cruza a distância; isso evidencia a sobreposição existente no layout."
+logical_id = "243f1c99-2f17-4519-8855-5bef4ff0d1c1"
+content_hash = "sha256:69a90e6d545fc6f32ee01f32bd302e09bce233994647c57c3dc368e054ba930d"
+size = 12099
+mtime_ms = 1793652892387
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/243f1c99-2f17-4519-8855-5bef4ff0d1c1/8c7aa4b0-b383-49eb-9cdf-9166a01ddf89"
+storage_version_token = "1793652920661926"
+content_type = "image/png"
