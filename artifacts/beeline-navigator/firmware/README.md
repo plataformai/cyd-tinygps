@@ -69,13 +69,13 @@ Quando o GPS não fornece uma leitura válida, o app envia `{"type":"speed","spe
 - Uma seção crítica entre os núcleos protege somente cópias das estruturas fixas e flags. Strings dinâmicas, logs, estado visível e TFT pertencem ao loop principal. Cada passagem consome no máximo uma navegação, uma velocidade e 16 bytes seriais.
 - O painel normal é atualizado no máximo uma vez por 100 ms (10 Hz), somente quando necessário. Navegação compara ângulo visível, distância e texto truncado da via; velocidade compara disponibilidade, número arredondado e posição do marcador. Uma leitura repetida renova o prazo de validade sem forçar desenho.
 - Alterar somente a velocidade redesenha somente o painel inferior. Alterar a navegação ainda exige desenho da tela inteira; estas melhorias reduzem trabalho redundante, mas não prometem eliminar toda cintilação.
-- A tela usa preenchimentos sólidos em cinza-escuro; a régua tem uma base preta visível ao redor das faixas coloridas. Não há framebuffer adicional alocado. O restante da tela só é redesenhado quando uma instrução visível muda; uma alteração da velocidade repinta somente o painel inferior.
+- A área principal usa preenchimento sólido em cinza-escuro. Toda a faixa inferior, incluindo leitura de velocidade e régua, usa fundo preto, sem linha divisória azul; o aviso de conexão não tem contorno. Não há framebuffer adicional alocado. O restante da tela só é redesenhado quando uma instrução visível muda; uma alteração da velocidade repinta somente o painel inferior.
 - `r0`–`r3` continuam disponíveis. A última rotação completa recebida em uma passagem é aplicada pelo loop e mostra o diagnóstico por 1,2 segundo, fora do limite normal de atualização. Comandos longos são descartados até a próxima quebra de linha. Durante o diagnóstico, navegação e velocidade continuam sendo processadas sem substituir a tela temporária; ao terminar, a última navegação e a disponibilidade atual da velocidade são restauradas.
 - Coordenadas e limites do painel ficam em `Layout`. O modo de diagnóstico em retrato preserva o preenchimento sólido e não altera o setup do display.
 
 ## Display e variantes da placa
 
-O sketch desenha a seta, distância e nome da via em orientação horizontal. No canto inferior, mostra o valor atual e uma régua colorida de 0 a 140 km/h, com graduações de 20 em 20 e marcações destacadas em 50 e 100 km/h. O indicador visual fica limitado à escala; o número mostra a velocidade recebida. O pinout acima é para a revisão comum da ESP32-2432S028 (CYD); clones e revisões podem usar outro GPIO de backlight ou reset. Se o display ficar apagado, confira a revisão da placa e ajuste o `User_Setup.h` e `TFT_BACKLIGHT_PIN` antes de tentar outra configuração.
+O sketch desenha a seta, distância e nome da via em orientação horizontal. No canto inferior, mostra o valor atual e uma régua colorida de 0 a 140 km/h, com graduações de 20 em 20. A faixa de 0–50 usa o mesmo amarelo-âmbar do título `BEELINE`; as faixas de 50–100 e 100–140 usam tons progressivamente mais escuros. As marcas verticais e os rótulos de 50 e 100 km/h usam o amarelo-âmbar do título. O indicador visual fica limitado à escala; o número mostra a velocidade recebida. O pinout acima é para a revisão comum da ESP32-2432S028 (CYD); clones e revisões podem usar outro GPIO de backlight ou reset. Se o display ficar apagado, confira a revisão da placa e ajuste o `User_Setup.h` e `TFT_BACKLIGHT_PIN` antes de tentar outra configuração.
 
 ### Firmware e download para build local
 
@@ -105,9 +105,9 @@ O preview web não acessa BLE, notificações Android nem localização em segun
 
 ### Verificações disponíveis e limite desta alteração
 
-O pacote de firmware foi inspecionado para garantir que contém o sketch e a configuração de placa documentada.
+O ZIP de firmware distribuído contém o sketch e este README, com a configuração de placa documentada.
 
-A suíte do sketch foi executada com `ArduinoJson` **7.4.2** e interfaces simuladas de Arduino, FreeRTOS, NimBLE e TFT. Passaram os testes de recepção, navegação, velocidade, preenchimento cinza, base preta da régua e rotação. Não foi compilado nem gravado um binário para ESP32, nem medidos heap e latência na placa.
+A suíte do sketch foi executada com `ArduinoJson` **7.4.2** e interfaces simuladas de Arduino, FreeRTOS, NimBLE e TFT. Passaram os testes de recepção, navegação, velocidade, área superior cinza-escura, faixa inferior preta, cores da régua, destaques amarelos em 50/100 km/h e rotação. Não foi compilado nem gravado um binário para ESP32, nem medidos heap e latência na placa.
 
 Para repetir, use uma cópia externa de ArduinoJson 7.x (não é necessário adicioná-la ao repositório):
 
@@ -123,7 +123,7 @@ Casos cobertos pela suíte completa:
 - Pacotes vazios, 181 bytes, JSON malformado, tipos incorretos, campos obrigatórios ausentes, NULs embutidos, dados após o objeto e profundidade seis são rejeitados sem alterar o último estado válido. Os limites de exatamente 180 bytes e profundidade cinco são aceitos.
 - Uma navegação seguida de 10.000 velocidades continua disponível; cada posição pendente mantém somente a última mensagem válida de seu tipo. Um pacote rejeitado não limpa navegação pendente.
 - Velocidade repetida renova a recepção sem desenho; leitura explicitamente inválida, negativa ou excessiva mostra indisponível. Timeout em 8000 ms, amostra pendente já vencida e volta do contador de tempo foram verificados.
-- Limite de atualização, número e marcador visíveis iguais sem redesenho, escala de 0–140 com marcações adicionais 50/100, manobras, distância limitada, base preta da régua, preenchimento sólido, `r0`–`r3` e limite de leitura serial foram exercitados.
+- Limite de atualização, número e marcador visíveis iguais sem redesenho, escala de 0–140 com cores progressivamente mais escuras e marcações 50/100 amarelas, manobras, distância limitada, faixa inferior preta, preenchimento sólido, `r0`–`r3` e limite de leitura serial foram exercitados.
 - As interfaces simuladas falham se o callback de escrita tentar desenhar ou imprimir; também falham se houver operações de TFT/serial dentro da seção crítica. O callback de desconexão foi invocado e reiniciou o advertising simulado.
 
 ### Ainda exige placa e telefone físicos

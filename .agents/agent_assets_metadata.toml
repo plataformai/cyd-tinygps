@@ -33,14 +33,14 @@ content_type = "application/octet-stream"
 id = "pxa-ZW_NUGSwaTXNdmCqZ"
 uri = "file://generated-artifacts/beeline-firmware.zip"
 type = "unspecified"
-title = "Firmware BeeLine — anúncio BLE atualizado"
-description = "Sketch e instruções. Nome BeeLine-ESP32 explícito na resposta de scan e UUID do serviço preservado."
+title = "Pacote de firmware BeeLine"
+description = "ZIP atualizado com o sketch beeline-esp32.ino e README para build local no Arduino IDE. É código-fonte, não um firmware compilado."
 logical_id = "4d874922-3a75-4be6-aedf-726c4109f74b"
-content_hash = "sha256:87adbee5de1f9beefc2d4e245e1782d242bec71f9a1ec22108e716f944d4fc70"
-size = 12852
-mtime_ms = 1793621344756
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/c0fa0340-b2fd-4e6c-8bac-2e2991c89d50"
-storage_version_token = "1793621403683396"
+content_hash = "sha256:5ddd7cf4c2bce3e350acd3aa77b047a174a16d2a09225402c42ad6746ce0de08"
+size = 12929
+mtime_ms = 1793663113118
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/847efcee-fbcb-4bb7-9fe1-bc8a66a84801"
+storage_version_token = "1793663121011870"
 content_type = "application/octet-stream"
 
 [[outputs]]
