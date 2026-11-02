@@ -7,4 +7,4 @@ trap 'rm -rf "$build"' EXIT
 "${CXX:-g++}" -std=c++17 -Wall -Wextra -Werror -pedantic \
   -I"$here/stubs" "$here/background-tests.cpp" -o "$build/background-tests"
 "$build/background-tests"
-echo "PASS: RGB565 wallpaper rendering, partial refresh, clipping and portrait fallback"
+echo "PASS: RGB565 wallpaper rendering, clipping, and direct/normal/swapped color diagnostic"

@@ -11,6 +11,7 @@ FILES = (
     "beeline-esp32.ino",
     "beeline_background.h",
     "beeline_background_renderer.h",
+    "beeline_color_test.h",
     "README.md",
     "assets/background.png",
     "assets/README.md",
@@ -27,7 +28,7 @@ def main():
     target = OUTPUT_DIR / "beeline-firmware.zip"
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as archive:
         for name in FILES:
-            info = zipfile.ZipInfo("beeline-firmware/" + name,
+            info = zipfile.ZipInfo("beeline-esp32/" + name,
                                    (2026, 1, 1, 0, 0, 0))
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o100644 << 16

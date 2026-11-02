@@ -21,6 +21,7 @@
 #include <math.h>
 #include <limits.h>
 #include "beeline_background_renderer.h"
+#include "beeline_color_test.h"
 
 static constexpr char DEVICE_NAME[] = "BeeLine-ESP32";
 static constexpr char SERVICE_UUID[] = "7b1e0001-6d2a-4f7a-9c21-8e8a4b12a001";
@@ -86,6 +87,9 @@ bool speedPanelDirty = true;
 uint32_t lastScreenUpdateMs = 0;
 int8_t pendingRotation = DEFAULT_DISPLAY_ROTATION;
 bool pendingRotationTest = false;
+bool pendingColorTest = false;
+bool colorTestActive = false;
+uint32_t colorTestStartedMs = 0;
 
 // Two independent, fixed-size latest-wins mailboxes. Speed bursts cannot evict
 // navigation. Only POD copies happen under this cross-core critical section:
@@ -315,6 +319,10 @@ void applyDisplayRotation(uint8_t rotation, bool rotationTest) {
 }
 
 void handleSerialCommand() {
+  if (serialCommandLength == 1 && serialCommand[0] == 'c') {
+    pendingColorTest = true;
+    return;
+  }
   if (serialCommandLength == 2 && serialCommand[0] == 'r' &&
       serialCommand[1] >= '0' && serialCommand[1] <= '3') {
     pendingRotation = static_cast<int8_t>(serialCommand[1] - '0');
@@ -322,7 +330,7 @@ void handleSerialCommand() {
     return;
   }
 
-  Serial.println("Comando serial invalido. Use r0, r1, r2 ou r3.");
+  Serial.println("Comando serial invalido. Use r0, r1, r2, r3 ou c (cores).");
 }
 
 void pollSerialCommands() {
@@ -341,7 +349,7 @@ void pollSerialCommands() {
       serialCommand[serialCommandLength++] = character;
     } else {
       serialCommandOverflow = true;
-      Serial.println("Comando longo demais. Use r0, r1, r2 ou r3.");
+      Serial.println("Comando longo demais. Use r0, r1, r2, r3 ou c (cores).");
     }
   }
 }
@@ -493,6 +501,7 @@ void setup() {
   advertising->start();
   Serial.printf("%s ready; waiting for Android BLE connection\n", DEVICE_NAME);
   Serial.println("Teste de rotacao: envie r0, r1, r2 ou r3 com Nova linha.");
+  Serial.println("Teste de cores: envie c com Nova linha (30 segundos).");
 }
 
 void loop() {
@@ -501,15 +510,37 @@ void loop() {
   uint32_t now = millis();
 
   if (pendingRotation >= 0) {
+    colorTestActive = false;
     applyDisplayRotation(static_cast<uint8_t>(pendingRotation), pendingRotationTest);
     pendingRotation = -1;
     screenDirty = true;
     now = millis();  // Rotation drawing may advance the clock.
   }
+  if (pendingColorTest) {
+    pendingColorTest = false;
+    if (display.width() == DISPLAY_LANDSCAPE_WIDTH &&
+        display.height() == DISPLAY_LANDSCAPE_HEIGHT) {
+      orientationCheckActive = false;
+      BeeLineColorTest::draw(display);
+      colorTestActive = true;
+      colorTestStartedMs = millis();
+      now = colorTestStartedMs;
+      Serial.println("[CORES] DIRETO=fillRect; PUSH NORMAL=swap false; PUSH SWAP=swap true.");
+      Serial.println("[CORES] Fotografe a tela e compare as tres colunas. Volta em 30s.");
+    } else {
+      Serial.println("[CORES] Use r1 ou r3 para 320x240 e depois envie c.");
+    }
+  }
   if (orientationCheckActive &&
       static_cast<uint32_t>(now - orientationCheckStartedMs) >= DISPLAY_ORIENTATION_CHECK_MS) {
     orientationCheckActive = false;
     screenDirty = true;
+  }
+  if (colorTestActive &&
+      static_cast<uint32_t>(now - colorTestStartedMs) >= BeeLineColorTest::DURATION_MS) {
+    colorTestActive = false;
+    screenDirty = true;
+    Serial.println("[CORES] Teste encerrado; restaurando navegacao.");
   }
 
   if (speedAvailable && static_cast<uint32_t>(now - lastSpeedUpdateMs) >= SPEED_TIMEOUT_MS) {
@@ -518,7 +549,7 @@ void loop() {
     speedPanelDirty = true;
     Serial.println("SPEED=stale");
   }
-  if (!orientationCheckActive &&
+  if (!orientationCheckActive && !colorTestActive &&
       static_cast<uint32_t>(now - lastScreenUpdateMs) >= SCREEN_UPDATE_INTERVAL_MS &&
       (screenDirty || speedPanelDirty)) {
     if (screenDirty) drawCurrentScreen();

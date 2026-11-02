@@ -193,6 +193,24 @@ int main() {
   server->callbacks->onDisconnect(server, info, 0);
   assert(NimBLEDevice::getAdvertising()->starts == advertising + 1);
   assert(hasNavigationInstruction);
+  Serial.send("c\n"); loop();
+  assert(colorTestActive && !orientationCheckActive && !display.getSwapBytes());
+  const int colorScreenDraws = display.fullDraws;
+  write(R"({"type":"navigation","maneuver":"left","road":"Durante teste de cores"})");
+  write(R"({"type":"speed","valid":true,"speedKmh":50})");
+  tick(BeeLineColorTest::DURATION_MS - 1);
+  assert(colorTestActive && display.fullDraws == colorScreenDraws);
+  assert(currentInstruction.road == "Durante teste de cores");
+  tick(1);
+  assert(!colorTestActive && display.fullDraws == colorScreenDraws + 1);
+  Serial.send("c\n"); loop(); assert(colorTestActive);
+  Serial.send("r3\n"); loop();
+  assert(!colorTestActive && orientationCheckActive && activeDisplayRotation == 3);
+  tick(1200);
+  Serial.send("r0\n"); loop();
+  Serial.send("c\n"); loop();
+  assert(!colorTestActive); // Do not crop the 320x240 comparison in portrait.
+  std::cout << "PASS: color diagnostic, BLE processing, timeout restoration and rotation exit\n";
   std::cout << "PASS: refresh limit, r0-r3, diagnostic restoration, maneuvers and advertising restart\n";
   std::cout << "All host firmware checks passed (hardware APIs simulated).\n";
 }
