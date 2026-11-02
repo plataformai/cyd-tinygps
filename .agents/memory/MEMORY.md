@@ -1,2 +1,2 @@
-- [Diagnóstico físico BeeLine](beeline-hardware.md) — otimizações de firmware não confirmam orientação, ruído ou pinagem; não trocar driver sem identificar a revisão.
+- [Diagnóstico físico BeeLine](beeline-hardware.md) — preservar ST7789/BGR validado; desvios de cor RGB565 exigem testes específicos na placa.
 - [Distribuição Android](beeline-distribution.md) — preservar o app original; ZIP EAS independente, achatado e sem lockfiles.
