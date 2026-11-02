@@ -14,3 +14,17 @@ mtime_ms = 1793435721975
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/48226f87-3ebb-47c0-b8e8-7b5117932c9f/650a69c5-19df-4db9-b224-a9d811fbced2"
 storage_version_token = "1793435733860189"
 content_type = "image/png"
+
+[[outputs]]
+id = "X6d5liqvopeFMUbBSZr5-"
+uri = "file://generated-artifacts/beeline-apk.zip"
+type = "unspecified"
+title = "BeeLine Android — ZIP corrigido para build externo"
+description = "Use esta versão: lockfile com URLs públicas, npm ci validado com cache vazio e hosts privados bloqueados, Node 22.13.0/npm 10.9.2. Inclui fontes, módulo Android e passo a passo; não contém APK compilado."
+logical_id = "af290ce3-4f7d-4d9a-9714-32ad72ca0cdf"
+content_hash = "sha256:ed4c27d08546bf5aeebeb03e6e17db0a517e556a23da4d81fc056e510f68ee17"
+size = 1196389
+mtime_ms = 1793582889185
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/de0759da-5f67-480c-b1f0-86254d9d43f2"
+storage_version_token = "1793582937709587"
+content_type = "application/octet-stream"

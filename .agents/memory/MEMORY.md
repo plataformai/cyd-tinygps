@@ -1,1 +1,2 @@
 - [Diagnóstico físico BeeLine](beeline-hardware.md) — otimizações de firmware não confirmam orientação, ruído ou pinagem; não trocar driver sem identificar a revisão.
+- [Distribuição Android](beeline-distribution.md) — exportação independente escolhida pelo usuário; preservar o app e o preview do monorepo.

@@ -1,4 +1,4 @@
-import { requireNativeModule, type EventSubscription } from 'expo-modules-core';
+import { requireNativeModule, type EventSubscription } from 'expo';
 
 export type MapsNotification = {
   packageName: string;
