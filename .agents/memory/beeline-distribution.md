@@ -16,3 +16,11 @@ O registry de pacotes do ambiente pode continuar sendo herdado mesmo ao instalar
 **Why:** Um export independente passou nos checks locais, mas ainda carregava URLs de tarballs de um registry privado do ambiente.
 
 **How to apply:** Verificar também os destinos de download e a instalação com cache vazio e hosts privados indisponíveis. Não mudar as políticas de registry do workspace para resolver a portabilidade da entrega.
+
+## Contrato do ZIP para EAS
+
+O ZIP do BeeLine deve abrir diretamente na raiz do projeto Expo, sem uma pasta envoltória nem a raiz do monorepo. Não incluir `node_modules/`, `.expo/`, `android/`, `ios/`, `pnpm-lock.yaml`, `package-lock.json` ou `.npmrc`; o usuário cria o lockfile localmente ao executar `npm install`, antes dos checks Expo e da build EAS. Preservar o app original, o identificador `app.beeline.navigator` e a configuração de preview Android APK. Os passos completos e o comando gerador devem permanecer documentados junto ao exportador em `scripts/beeline-export/EXPORTACAO.md`.
+
+**Why:** o usuário pediu uma exportação EAS autocontida sem lockfiles, com instalação inicial via npm, e pediu que essas instruções permaneçam para futuras gerações do ZIP.
+
+**How to apply:** tratar o conteúdo de `scripts/beeline-export/EXPORTACAO.md` como o guia operacional completo; manter o teste estrutural do ZIP alinhado a este contrato. O lockfile interno de validação, se mantido, nunca deve ser copiado para o ZIP.
