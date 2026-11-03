@@ -44,9 +44,12 @@ static void runTelemetryChecks() {
   }
   assert(std::string(headingCardinal(0)) == "N");
   assert(std::string(headingCardinal(45)) == "NE");
-  assert(std::string(headingCardinal(90)) == "L");
+  assert(std::string(headingCardinal(90)) == "E");
   assert(std::string(headingCardinal(180)) == "S");
-  assert(std::string(headingCardinal(270)) == "O");
+  assert(std::string(headingCardinal(270)) == "W");
+  assert(std::string(headingCardinal(135)) == "SE");
+  assert(std::string(headingCardinal(225)) == "SW");
+  assert(std::string(headingCardinal(315)) == "NW");
   assert(std::string(headingCardinal(359)) == "N");
   assert(normalizedHeading(360) == 0);
   int16_t x359, y359;

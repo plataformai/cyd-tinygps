@@ -16,9 +16,9 @@ test('uses course of travel, never phone orientation; rejects stationary, inaccu
   assert.equal(gpsCourse({ ...fix(), timestamp: now + 1001 }, now), null);
   assert.equal(gpsCourse(fix(45, { speed: 1.5, accuracy: 35 }), now), 45);
 });
-test('formats all Portuguese cardinals and safely crosses true north', () => {
-  for (const [degrees, label] of [[0, '0° N'], [45, '45° NE'], [90, '90° L'], [135, '135° SE'],
-    [180, '180° S'], [225, '225° SO'], [270, '270° O'], [315, '315° NO'], [359, '359° N'], [360, '0° N']])
+test('formats all English cardinals and safely crosses true north', () => {
+  for (const [degrees, label] of [[0, '0° N'], [45, '45° NE'], [90, '90° E'], [135, '135° SE'],
+    [180, '180° S'], [225, '225° SW'], [270, '270° W'], [315, '315° NW'], [359, '359° N'], [360, '0° N']])
     assert.equal(courseLabel(degrees), label);
   assert.equal(courseLabel(null), '—');
   assert.equal(courseLabel(NaN), '—');

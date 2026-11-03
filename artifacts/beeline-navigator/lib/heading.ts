@@ -16,7 +16,7 @@ export function gpsCourse(fix: CourseFix, now = Date.now()): number | null {
 export function courseLabel(degrees: number | null): string {
   if (degrees === null || !Number.isFinite(degrees)) return '—';
   const angle = ((degrees % 360) + 360) % 360;
-  const cardinal = ['N', 'NE', 'L', 'SE', 'S', 'SO', 'O', 'NO'][Math.floor((angle + 22.5) / 45) % 8];
+  const cardinal = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.floor((angle + 22.5) / 45) % 8];
   return `${Math.round(angle) % 360}° ${cardinal}`;
 }
 

@@ -161,7 +161,7 @@ float normalizedHeading(float degrees) {
 }
 
 const char* headingCardinal(float degrees) {
-  static const char* const names[] = {"N", "NE", "L", "SE", "S", "SO", "O", "NO"};
+  static const char* const names[] = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
   return names[static_cast<int>(floorf((normalizedHeading(degrees) + 22.5f) / 45.0f)) % 8];
 }
 
@@ -195,7 +195,7 @@ void drawSidePanel() {
   display.setTextDatum(MC_DATUM);
   display.setTextColor(COLOR_TEXT);
   if (headingAvailable) {
-    static const char* const labels[] = {"N", "L", "S", "O"};
+    static const char* const labels[] = {"N", "E", "S", "W"};
     for (uint8_t i = 0; i < 4; ++i) {
       int16_t x, y;
       cardinalPosition(i, currentHeading, x, y);
