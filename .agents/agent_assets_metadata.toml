@@ -140,3 +140,17 @@ mtime_ms = 1793652892387
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/243f1c99-2f17-4519-8855-5bef4ff0d1c1/8c7aa4b0-b383-49eb-9cdf-9166a01ddf89"
 storage_version_token = "1793652920661926"
 content_type = "image/png"
+
+[[outputs]]
+id = "I-FAMH-nDrIkvaqmwvmCQ"
+uri = "file://generated-artifacts/beeline-esp32-tela-previa.png"
+type = "image"
+title = "Prévia da tela ESP32 — 45° NE, 3,9 km e 50 km/h"
+description = "Simulação horizontal do firmware em 320×240, desenhada com as rotinas reais da tela: seta direita a 350 m, bússola e letras cardeais orbitais, distância ao destino, faixa inferior preta e escala de velocidade. A moldura é ilustrativa; a tipografia é aproximada, portanto isto não é uma captura da placa física."
+logical_id = "126b6e33-b8c7-4aa8-b085-bd4fb93345fd"
+content_hash = "sha256:40264e11f9d3cd4b930f58d2e825f1c1cf9f0550aa0e80f2d5c69001e40c4053"
+size = 93352
+mtime_ms = 1793720087184
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/126b6e33-b8c7-4aa8-b085-bd4fb93345fd/4044ac6b-f80d-4785-bb5a-3d7dfbb1b86d"
+storage_version_token = "1793720115728078"
+content_type = "image/png"
