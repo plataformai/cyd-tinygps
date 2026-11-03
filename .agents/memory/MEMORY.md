@@ -1,2 +1,3 @@
 - [Diagnóstico físico BeeLine](beeline-hardware.md) — preservar ST7789/BGR validado; alterações no display devem evitar regressões de orientação e pinagem.
 - [Distribuição Android](beeline-distribution.md) — preservar o app original; ZIP EAS independente, achatado e sem lockfiles.
+- [Origem da orientação](orientacao-gps.md) — a bússola representa o deslocamento GPS, não a posição física do celular.
