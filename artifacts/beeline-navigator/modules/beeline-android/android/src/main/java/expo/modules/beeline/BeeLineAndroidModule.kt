@@ -28,6 +28,16 @@ import expo.modules.kotlin.functions.Coroutine
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
 import java.util.UUID
 import kotlin.coroutines.resume
@@ -50,12 +60,24 @@ class BeeLineAndroidModule : Module() {
   private var pendingConnection: kotlinx.coroutines.CancellableContinuation<Unit>? = null
   private var pendingWrite: kotlinx.coroutines.CancellableContinuation<Unit>? = null
   private val mainHandler = Handler(Looper.getMainLooper())
+  private val writeMutex = Mutex()
+  private val nativeScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+  private var routeUpdateRunning = false
+  private var routeUpdateRequested = false
+  private var routeDemoUntil = 0L
+  private val routeHeartbeat = object : Runnable {
+    override fun run() {
+      if (commandCharacteristic != null) scheduleRouteUpdate()
+      mainHandler.postDelayed(this, 5000)
+    }
+  }
 
   private val notificationReceiver = object : android.content.BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
       if (intent?.action != BeeLineNotificationListenerService.ACTION_NOTIFICATION_UPDATED) return
       val serialized = intent.getStringExtra(BeeLineNotificationListenerService.EXTRA_NOTIFICATION) ?: return
       val event = JSONObject(serialized)
+      routeDemoUntil = 0L // A real notification always supersedes an explicit test.
       sendEvent(
         "onMapsNotification",
         mapOf(
@@ -68,12 +90,17 @@ class BeeLineAndroidModule : Module() {
           "postedAt" to event.optLong("postedAt"),
         ),
       )
+      // Native delivery does not depend on React timers while Maps is foreground.
+      scheduleRouteUpdate()
     }
   }
 
   private val gattCallback = object : BluetoothGattCallback() {
     override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+      mainHandler.post {
+      if (bluetoothGatt !== gatt) return@post
       if (status != BluetoothGatt.GATT_SUCCESS) {
+        abortWrite("Conexão BLE interrompida.")
         emitConnection("error", "Falha na conexão BLE (código $status)")
         pendingConnection?.let {
           if (it.isActive) it.resumeWithException(IllegalStateException("Falha na conexão BLE (código $status)"))
@@ -82,38 +109,44 @@ class BeeLineAndroidModule : Module() {
         gatt.close()
         bluetoothGatt = null
         commandCharacteristic = null
-        return
+        return@post
       }
       if (newState == BluetoothProfile.STATE_CONNECTED) {
         bluetoothGatt = gatt
         emitConnection("connecting", "Conectado; localizando serviço BeeLine…")
         if (!gatt.requestMtu(247)) gatt.discoverServices()
       } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+        abortWrite("Dispositivo desconectado durante a escrita.")
         commandCharacteristic = null
         bluetoothGatt = null
         gatt.close()
         emitConnection("disconnected", "Desconectado")
       }
+      }
     }
 
     override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) {
-      gatt.discoverServices()
+      mainHandler.post { if (bluetoothGatt === gatt) gatt.discoverServices() }
     }
 
     override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
+      mainHandler.post {
+      if (bluetoothGatt !== gatt) return@post
       if (status != BluetoothGatt.GATT_SUCCESS) {
         failPendingConnection("Não foi possível ler os serviços BLE.")
-        return
+        return@post
       }
       val characteristic = gatt.getService(SERVICE_UUID)?.getCharacteristic(COMMAND_UUID)
       if (characteristic == null) {
         failPendingConnection("O serviço BeeLine não foi encontrado no ESP32.")
-        return
+        return@post
       }
       commandCharacteristic = characteristic
       emitConnection("connected", "BeeLine-ESP32 conectado")
+      scheduleRouteUpdate()
       pendingConnection?.let { if (it.isActive) it.resume(Unit) }
       pendingConnection = null
+      }
     }
 
     override fun onCharacteristicWrite(
@@ -121,11 +154,14 @@ class BeeLineAndroidModule : Module() {
       characteristic: BluetoothGattCharacteristic,
       status: Int,
     ) {
-      val continuation = pendingWrite ?: return
+      mainHandler.post {
+      if (bluetoothGatt !== gatt) return@post
+      val continuation = pendingWrite ?: return@post
       pendingWrite = null
       if (continuation.isActive) {
         if (status == BluetoothGatt.GATT_SUCCESS) continuation.resume(Unit)
         else continuation.resumeWithException(IllegalStateException("O ESP32 recusou a escrita BLE (código $status)."))
+      }
       }
     }
   }
@@ -142,9 +178,13 @@ class BeeLineAndroidModule : Module() {
         @Suppress("DEPRECATION")
         context.registerReceiver(notificationReceiver, filter)
       }
+      mainHandler.post(routeHeartbeat)
     }
 
     OnDestroy {
+      mainHandler.removeCallbacks(routeHeartbeat)
+      abortWrite("Integração Android encerrada.")
+      nativeScope.cancel()
       try {
         context.unregisterReceiver(notificationReceiver)
       } catch (_: IllegalArgumentException) {
@@ -158,11 +198,7 @@ class BeeLineAndroidModule : Module() {
     }
 
     AsyncFunction("isNotificationAccessEnabled") {
-      val enabledListeners = Settings.Secure.getString(
-        context.contentResolver,
-        "enabled_notification_listeners",
-      ).orEmpty()
-      enabledListeners.contains(context.packageName)
+      hasNotificationAccess()
     }
 
     AsyncFunction("openNotificationAccessSettings") {
@@ -187,6 +223,12 @@ class BeeLineAndroidModule : Module() {
       )
     }
 
+    AsyncFunction("getRouteSummary") {
+      val (meters, ttl) = currentRoute()
+      mapOf("remainingMeters" to meters, "validUntil" to
+        if (meters != null) System.currentTimeMillis() + ttl else 0L)
+    }
+
     AsyncFunction("scanAndConnect") Coroutine { ->
       scanAndConnect()
     }
@@ -195,14 +237,74 @@ class BeeLineAndroidModule : Module() {
       writeCommand(command)
     }
 
-    AsyncFunction("disconnect") {
-      stopScan()
-      bluetoothGatt?.disconnect()
-      bluetoothGatt?.close()
-      bluetoothGatt = null
-      commandCharacteristic = null
-      emitConnection("disconnected", "Desconectado")
+    AsyncFunction("disconnect") Coroutine { ->
+      withContext(Dispatchers.Main.immediate) {
+        stopScan()
+        routeDemoUntil = 0
+        abortWrite("Dispositivo desconectado.")
+        bluetoothGatt?.disconnect()
+        bluetoothGatt?.close()
+        bluetoothGatt = null
+        commandCharacteristic = null
+        emitConnection("disconnected", "Desconectado")
+      }
     }
+  }
+
+  private fun hasNotificationAccess(): Boolean {
+    val listeners = Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners").orEmpty()
+    return listeners.split(':').any { it.substringBefore('/') == context.packageName }
+  }
+
+  private fun currentRoute(): Pair<Long?, Long> {
+    if (!hasNotificationAccess()) return null to 0L
+    val serialized = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+      .getString(LATEST_NOTIFICATION_KEY, null) ?: return null to 0L
+    return try {
+      val notification = JSONObject(serialized)
+      val ttl = RouteSummary.ttl(notification.optLong("postedAt"), System.currentTimeMillis())
+      if (ttl == 0L) null to 0L else {
+        val fields = listOf("title", "text", "bigText", "subText", "textLines")
+          .map { notification.optString(it) }
+        RouteSummary.parse(fields) to ttl
+      }
+    } catch (_: Exception) { null to 0L }
+  }
+
+  private fun scheduleRouteUpdate() {
+    if (Looper.myLooper() != Looper.getMainLooper()) {
+      mainHandler.post { scheduleRouteUpdate() }
+      return
+    }
+    if (commandCharacteristic == null || System.currentTimeMillis() < routeDemoUntil) return
+    routeUpdateRequested = true
+    if (routeUpdateRunning) return
+    routeUpdateRunning = true
+    nativeScope.launch {
+      try {
+        while (routeUpdateRequested && commandCharacteristic != null) {
+          routeUpdateRequested = false
+          serializedWrite {
+            // Evaluate freshness after acquiring the BLE lock, not before waiting.
+            val (meters, ttl) = currentRoute()
+            JSONObject().apply {
+              put("type", "route")
+              put("valid", meters != null)
+              put("remainingMeters", meters ?: JSONObject.NULL)
+              put("ttlMs", ttl)
+            }.toString()
+          }
+        }
+      } catch (error: Exception) {
+        android.util.Log.w("BeeLineRoute", "Resumo da rota não enviado; próxima atualização tentará novamente.", error)
+      } finally { routeUpdateRunning = false }
+    }
+  }
+
+  private fun abortWrite(message: String) {
+    val continuation = pendingWrite
+    pendingWrite = null
+    if (continuation?.isActive == true) continuation.resumeWithException(IllegalStateException(message))
   }
 
   private fun emitConnection(state: String, message: String) {
@@ -210,6 +312,7 @@ class BeeLineAndroidModule : Module() {
   }
 
   private fun failPendingConnection(message: String) {
+    abortWrite(message)
     stopScan()
     emitConnection("error", message)
     pendingConnection?.let { if (it.isActive) it.resumeWithException(IllegalStateException(message)) }
@@ -331,7 +434,41 @@ class BeeLineAndroidModule : Module() {
     scanCallback = null
   }
 
-  private suspend fun writeCommand(command: String) = suspendCancellableCoroutine<Unit> { continuation ->
+  private suspend fun serializedWrite(build: () -> String) {
+    writeMutex.withLock {
+      withContext(Dispatchers.Main.immediate) {
+        try {
+          withTimeout(4000) { performWrite(build()) }
+        } catch (error: TimeoutCancellationException) {
+          // Do not let a late ACK acknowledge a different command on this GATT.
+          abortWrite("A escrita BLE expirou.")
+          bluetoothGatt?.disconnect()
+          bluetoothGatt?.close()
+          bluetoothGatt = null
+          commandCharacteristic = null
+          emitConnection("error", "A escrita BLE expirou. Reconecte à placa.")
+          throw error
+        }
+      }
+    }
+  }
+
+  private suspend fun writeCommand(command: String) = serializedWrite {
+    val parsed = JSONObject(command)
+    if (parsed.optString("type") == "route" && parsed.optBoolean("diagnostic")) {
+      routeDemoUntil = System.currentTimeMillis() + 8000
+    }
+    if (parsed.optString("type") in listOf("heading", "speed")) {
+      val age = System.currentTimeMillis() - parsed.optLong("timestamp")
+      if (age < -1000 || age > 5000) {
+        parsed.put("valid", false)
+        parsed.put(if (parsed.optString("type") == "heading") "degrees" else "speedKmh", JSONObject.NULL)
+      }
+    }
+    parsed.toString()
+  }
+
+  private suspend fun performWrite(command: String) = suspendCancellableCoroutine<Unit> { continuation ->
     requireBluetoothPermission(Manifest.permission.BLUETOOTH_CONNECT)
     val gatt = bluetoothGatt
     val characteristic = commandCharacteristic
@@ -349,7 +486,7 @@ class BeeLineAndroidModule : Module() {
       return@suspendCancellableCoroutine
     }
     pendingWrite = continuation
-    continuation.invokeOnCancellation { pendingWrite = null }
+    continuation.invokeOnCancellation { if (pendingWrite === continuation) pendingWrite = null }
     try {
       val accepted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         gatt.writeCharacteristic(

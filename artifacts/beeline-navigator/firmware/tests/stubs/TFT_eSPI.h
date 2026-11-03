@@ -26,7 +26,17 @@ struct TFT_eSPI {
     lastFillColor = static_cast<uint16_t>(color);
     rectangles.push_back({x, y, width, height, static_cast<uint16_t>(color)});
   }
-  template <typename... T> void fillTriangle(T...) { touch(); }
+  struct TriangleSample { int x0, y0, x1, y1, x2, y2, color; };
+  std::vector<TriangleSample> triangles;
+  void fillTriangle(int x0, int y0, int x1, int y1, int x2, int y2, int color) {
+    touch(); triangles.push_back({x0, y0, x1, y1, x2, y2, color});
+  }
+  struct CircleSample { int x, y, radius, color; };
+  std::vector<CircleSample> circles;
+  void fillCircle(int x, int y, int radius, int color) {
+    touch(); circles.push_back({x, y, radius, color});
+  }
+  int textWidth(const String& value, int font) { touch(); return value.length() * (font == 1 ? 6 : 8); }
   void drawFastHLine(int x, int y, int width, int color) {
     touch(); horizontalLines.push_back({x, y, width, static_cast<uint16_t>(color)});
   }

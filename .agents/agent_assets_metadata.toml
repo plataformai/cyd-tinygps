@@ -19,28 +19,28 @@ content_type = "image/png"
 id = "X6d5liqvopeFMUbBSZr5-"
 uri = "file://generated-artifacts/beeline-apk.zip"
 type = "unspecified"
-title = "BeeLine Android — captura de instruções Maps atualizada"
-description = "Projeto-fonte independente para gerar um novo APK. Inclui recuperação de notificações ativas, proteção contra remoção de outra notificação e diagnóstico local do texto recebido. Não é um APK compilado."
+title = "Projeto Android atualizado"
+description = "Projeto independente para gerar o novo APK, com rumo GPS, resumo da rota e escritas BLE serializadas. Não contém APK compilado."
 logical_id = "af290ce3-4f7d-4d9a-9714-32ad72ca0cdf"
-content_hash = "sha256:151d7b57d749ed5ba57862a00de08077ccf760d5056a4c23cd8a08861549a5ed"
-size = 1130396
-mtime_ms = 1793633008190
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/08326be4-74e7-41ef-978a-83e6a576dfca"
-storage_version_token = "1793633061125960"
+content_hash = "sha256:570a3121634d69a9c17b07410a4c3c6fb9638161316d72d610684a62893a83dc"
+size = 1135344
+mtime_ms = 1793708605307
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/fc19b322-5826-4a5a-8f18-489d70042473"
+storage_version_token = "1793708724048104"
 content_type = "application/octet-stream"
 
 [[outputs]]
 id = "pxa-ZW_NUGSwaTXNdmCqZ"
 uri = "file://generated-artifacts/beeline-firmware.zip"
 type = "unspecified"
-title = "Pacote de firmware BeeLine"
-description = "ZIP atualizado com o sketch beeline-esp32.ino e README para build local no Arduino IDE. É código-fonte, não um firmware compilado."
+title = "Firmware ESP32 — bússola e destino"
+description = "Código-fonte .ino e instruções. Preserva ST7789/BGR e a faixa inferior; requer compilação e gravação na placa."
 logical_id = "4d874922-3a75-4be6-aedf-726c4109f74b"
-content_hash = "sha256:5ddd7cf4c2bce3e350acd3aa77b047a174a16d2a09225402c42ad6746ce0de08"
-size = 12929
-mtime_ms = 1793663113118
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/847efcee-fbcb-4bb7-9fe1-bc8a66a84801"
-storage_version_token = "1793663121011870"
+content_hash = "sha256:4dae3bd37d4223b51e5ed474d0c0ce2b6fe744038d908f499aaaed076a92edb9"
+size = 16476
+mtime_ms = 1793708604072
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/28e88be1-cb1c-41be-8917-2d831e40c5f4"
+storage_version_token = "1793708723294430"
 content_type = "application/octet-stream"
 
 [[outputs]]

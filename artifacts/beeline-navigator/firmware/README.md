@@ -2,6 +2,8 @@
 
 Este sketch cria um periférico BLE chamado `BeeLine-ESP32`, recebe cada instrução como JSON pela característica GATT de escrita e desenha a seta no display integrado da placa ESP32-2432S028.
 
+Esta versão acrescenta rumo GPS e distância restante. Para usar esses dados, atualize **o firmware e o APK** usando os novos pacotes fonte; um APK antigo não envia os novos campos. Os ZIPs não contêm binários compilados.
+
 ## Preparar
 
 1. Instale o Arduino IDE e o suporte às placas ESP32.
@@ -62,13 +64,30 @@ Quando o GPS não fornece uma leitura válida, o app envia `{"type":"speed","spe
 
 `valid` deve ser booleano. Com `valid:true`, `speedKmh` deve ser um número; tipos incorretos, ausência ou `null` são pacotes malformados e não alteram o estado. Com `valid:false`, `speedKmh` pode ser numérico, `null` ou ausente, e a velocidade fica indisponível. Um número negativo, não finito após conversão para `float`, ou que não caiba no inteiro exibido também torna a leitura indisponível. O valor interno é zerado quando indisponível: não se exibe uma leitura antiga como atual. O timeout ocorre a partir de **8000 ms** desde a recepção, inclusive se o pacote ficou pendente; cálculos usam subtração sem sinal para suportar a volta de `millis()`.
 
+### Rumo GPS e distância restante
+
+Os UUIDs e os comandos anteriores não mudaram. Os novos comandos também são JSON UTF-8 de até 180 bytes:
+
+```json
+{"type":"heading","degrees":45,"valid":true,"timestamp":1761600000000}
+{"type":"route","remainingMeters":3900,"valid":true,"ttlMs":30000}
+```
+
+- `heading`: `valid` é booleano; quando verdadeiro, `degrees` é um número finito entre 0 e 360 (360 equivale a 0). Tipos incorretos não substituem uma mensagem válida pendente. Valores fora do intervalo tornam o rumo indisponível. `{"type":"heading","degrees":null,"valid":false}` limpa a leitura. O prazo local é de **8 segundos**, contado desde a recepção, e desconectar o BLE invalida o rumo.
+- `route`: `remainingMeters` é um inteiro de 0 a 40.000.000, sem o limite de 65.535 aplicado à distância da próxima curva. `ttlMs` é obrigatório com `valid:true`, inteiro de 1 a 30.000. `{"type":"route","remainingMeters":null,"valid":false}` limpa o resumo. Tipos incorretos são descartados; distância negativa ou acima do limite torna o dado indisponível.
+- O Android envia rumo de deslocamento do GPS, **não a orientação física do celular**. Só aceita fix com até 5 segundos de idade, precisão horizontal entre 0 e 35 m e velocidade de pelo menos **1,5 m/s (5,4 km/h)**. Isso evita apresentar deriva de GPS parado como direção confiável. Não usa magnetômetro.
+- O listener nativo lê somente campos públicos das notificações do Maps. Procura distância de resumo ao lado de duração/chegada ou um rótulo explícito de distância restante; uma distância de manobra isolada nunca é usada como total. Por exemplo, `0 m · em direção a uma via · 10min · 3,9 km · Chegada: 17:49` resulta em 3900 m restantes, mesmo sem manobra reconhecida.
+- Com BLE conectado, o módulo nativo reenvia o resumo a cada 5 segundos, sem depender de temporizadores React. Um resumo só é aceito por até **120 segundos desde a publicação da notificação**. O TTL enviado à placa é o menor entre 30 segundos e o tempo de validade restante da fonte; o heartbeat não renova indefinidamente uma notificação velha.
+- Remoção/encerramento da notificação, nova notificação sem resumo identificável, acesso revogado, expiração ou desconexão invalidam a distância. Não se calcula distância em linha reta nem se acessam dados privados da rota. Formatos não identificáveis mostram `--`, em vez de inventar um total.
+- Todas as escritas Android passam pelo mesmo mutex BLE, com confirmação e timeout de 4 segundos. Em timeout, a conexão é fechada para impedir que um ACK atrasado seja atribuído a outra mensagem; reconecte à placa. Rumo/velocidade que envelhecerem durante a espera são invalidados antes do envio.
+
 ## Recepção, rajadas e atualização da tela
 
 - O callback BLE apenas limita, interpreta e valida o pacote e publica uma cópia de tamanho fixo. Não desenha, não imprime no serial e não segura um mutex durante desenho ou interpretação JSON.
-- Há **duas posições independentes** de armazenamento pendente: uma navegação e uma velocidade. Em cada tipo, a última mensagem válida recebida substitui a anterior ainda pendente. Mensagens intermediárias podem ser combinadas; não há fila crescente nem garantia de exibir cada amostra. Uma rajada de velocidade nunca elimina a última navegação. Uma leitura `valid:false` tem a mesma prioridade de chegada de qualquer outra velocidade.
-- Uma seção crítica entre os núcleos protege somente cópias das estruturas fixas e flags. Strings dinâmicas, logs, estado visível e TFT pertencem ao loop principal. Cada passagem consome no máximo uma navegação, uma velocidade e 16 bytes seriais.
+- Há **quatro posições independentes** de armazenamento pendente: navegação, velocidade, rumo e distância restante. Em cada tipo, a última mensagem válida recebida substitui a anterior ainda pendente. Mensagens intermediárias podem ser combinadas; não há fila crescente nem garantia de exibir cada amostra. Uma rajada de velocidade nunca elimina os outros tipos. Uma leitura `valid:false` tem a mesma prioridade de chegada de qualquer outra leitura do mesmo tipo.
+- Uma seção crítica entre os núcleos protege somente cópias das estruturas fixas e flags. Strings dinâmicas, logs, estado visível e TFT pertencem ao loop principal. Cada passagem consome no máximo uma mensagem de cada tipo e 16 bytes seriais.
 - O painel normal é atualizado no máximo uma vez por 100 ms (10 Hz), somente quando necessário. Navegação compara ângulo visível, distância e texto truncado da via; velocidade compara disponibilidade, número arredondado e posição do marcador. Uma leitura repetida renova o prazo de validade sem forçar desenho.
-- Alterar somente a velocidade redesenha somente o painel inferior. Alterar a navegação ainda exige desenho da tela inteira; estas melhorias reduzem trabalho redundante, mas não prometem eliminar toda cintilação.
+- Alterar somente a velocidade redesenha somente o painel inferior. Rumo e distância restante redesenham somente a coluna direita. Alterar a navegação ainda exige desenho da tela inteira; estas melhorias reduzem trabalho redundante, mas não prometem eliminar toda cintilação.
 - A área principal usa preenchimento sólido em cinza-escuro. Toda a faixa inferior, incluindo leitura de velocidade e régua, usa fundo preto, sem linha divisória azul; o aviso de conexão não tem contorno. Não há framebuffer adicional alocado. O restante da tela só é redesenhado quando uma instrução visível muda; uma alteração da velocidade repinta somente o painel inferior.
 - `r0`–`r3` continuam disponíveis. A última rotação completa recebida em uma passagem é aplicada pelo loop e mostra o diagnóstico por 1,2 segundo, fora do limite normal de atualização. Comandos longos são descartados até a próxima quebra de linha. Durante o diagnóstico, navegação e velocidade continuam sendo processadas sem substituir a tela temporária; ao terminar, a última navegação e a disponibilidade atual da velocidade são restauradas.
 - Coordenadas e limites do painel ficam em `Layout`. O modo de diagnóstico em retrato preserva o preenchimento sólido e não altera o setup do display.
@@ -76,6 +95,10 @@ Quando o GPS não fornece uma leitura válida, o app envia `{"type":"speed","spe
 ## Display e variantes da placa
 
 O sketch desenha a seta, distância e nome da via em orientação horizontal. No canto inferior, mostra o valor atual e uma régua colorida de 0 a 140 km/h, com graduações de 20 em 20. A faixa de 0–50 usa o mesmo amarelo-âmbar do título `BEELINE`; as faixas de 50–100 e 100–140 usam tons progressivamente mais escuros. As marcas verticais e os rótulos de 50 e 100 km/h usam o amarelo-âmbar do título. O indicador visual fica limitado à escala; o número mostra a velocidade recebida. O pinout acima é para a revisão comum da ESP32-2432S028 (CYD); clones e revisões podem usar outro GPIO de backlight ou reset. Se o display ficar apagado, confira a revisão da placa e ajuste o `User_Setup.h` e `TFT_BACKLIGHT_PIN` antes de tentar outra configuração.
+
+A área superior divide-se em 240 pixels à esquerda para manobra e 80 pixels à direita para bússola, rumo e destino. A bússola usa círculo na cor da última faixa da régua e seta cinza-escura fixa para cima. As letras N/L/S/O orbitam o círculo: rumo 0° coloca N acima; rumo 90° coloca L acima e N à esquerda. Não há interpolação que dê uma volta completa na passagem 359°/0°.
+
+O texto do rumo usa oito direções (N, NE, L, SE, S, SO, O, NO). Sem rumo confiável, as letras orbitais desaparecem e a leitura fica `--`; a seta fixa não representa um rumo conhecido nesse estado. A distância ao destino usa metros abaixo de 1 km e quilômetros acima disso, com vírgula decimal. A distância da próxima manobra continua na área esquerda. O nome da via é ajustado para caber nessa área. Nenhuma imagem PNG ou framebuffer adicional é necessário.
 
 ### Firmware e download para build local
 
@@ -93,11 +116,12 @@ O preview web e o Expo Go não incluem código Android customizado. Para testar 
 4. Instale `android/app/build/outputs/apk/debug/app-debug.apk` no telefone (por exemplo, `adb install -r app/build/outputs/apk/debug/app-debug.apk`).
 5. Abra BeeLine, toque em **Acesso ao Google Maps** e permita o acesso nas configurações de **Acesso a notificações**. Volte ao app e confirme o status autorizado.
 6. Desconecte o nRF Connect se estiver usando-o. Toque em **Conectar BeeLine-ESP32** e aceite as permissões Bluetooth solicitadas. O app aceita o nome ou o UUID anunciado e confirma o serviço GATT; confira o estado **CONECTADO**.
-7. Toque em **Enviar instrução de teste**. O TFT deve mostrar a seta ligeiramente à direita, `350 m` e `Rua Haddock Lobo`; o monitor serial deve registrar `TURN=slight_right`.
-8. Toque em **Ativar velocidade GPS**, permita localização durante o uso e depois localização em segundo plano. A notificação persistente do Android deve informar que a velocidade está sendo enviada.
+7. Toque em **Enviar instrução de teste**. O TFT deve mostrar a seta ligeiramente à direita, `350 m` e a via de teste; o monitor serial deve registrar `TURN=slight_right`. Também são enviados **45° NE e destino a 3,9 km**, identificados no app como TESTE e válidos por até oito segundos. Dados reais podem substituir o teste. Não confunda esses valores de bancada com medições de GPS ou rota.
+8. Toque em **Ativar GPS: velocidade e rumo**, permita localização durante o uso e depois localização em segundo plano. A notificação persistente do Android deve informar que o GPS está sendo enviado.
 9. Em local aberto, mova-se com o telefone para obter uma leitura GPS e confira o valor no app, o preenchimento do marcador na régua do TFT e uma linha `SPEED=... km/h` no monitor serial. Parado, a velocidade pode aparecer como zero conforme a leitura do GPS.
 10. Desative o GPS, revogue a permissão ou interrompa as atualizações e confirme que a placa troca para `-- km/h` ao receber leitura inválida ou após oito segundos sem atualização. O aplicativo permite parar a captura pelo mesmo botão.
 11. Desconecte a placa, confirme que o app indica a desconexão, ligue-a e conecte de novo. Inicie uma rota no Google Maps e confirme que uma notificação compatível ainda atualiza a instrução do app e do TFT.
+12. Sem operar o celular ao dirigir, confirme o rumo em um deslocamento seguro acima de 5,4 km/h. Parado ou com GPS impreciso, espere `--`. Compare a distância ao destino com o resumo do Maps; encerre a rota e confira que esse valor desaparece. Repita com o Maps em primeiro plano e observe a invalidação após perda de BLE/GPS ou de notificações.
 
 ## Limite de validação
 
@@ -125,6 +149,9 @@ Casos cobertos pela suíte completa:
 - Velocidade repetida renova a recepção sem desenho; leitura explicitamente inválida, negativa ou excessiva mostra indisponível. Timeout em 8000 ms, amostra pendente já vencida e volta do contador de tempo foram verificados.
 - Limite de atualização, número e marcador visíveis iguais sem redesenho, escala de 0–140 com cores progressivamente mais escuras e marcações 50/100 amarelas, manobras, distância limitada, faixa inferior preta, preenchimento sólido, `r0`–`r3` e limite de leitura serial foram exercitados.
 - As interfaces simuladas falham se o callback de escrita tentar desenhar ou imprimir; também falham se houver operações de TFT/serial dentro da seção crítica. O callback de desconexão foi invocado e reiniciou o advertising simulado.
+- A suíte adicional cobre a coluna de 80 pixels, posições cardeais em 0/45/90/180/270/359 graus, seta fixa, passagem pelo norte, formatação da distância, mensagens intercaladas, dados inválidos, expiração, desconexão e volta de `millis()`.
+
+Na árvore do projeto, os testes TypeScript de rumo e navegação rodam com `node --experimental-strip-types --test artifacts/beeline-navigator/tests/*.test.mjs`. O parser real de resumo Kotlin é verificado sem Android por `bash artifacts/beeline-navigator/tests/run-route-checks.sh` (requer Kotlin/JDK). Esses testes não compilam o módulo Android completo nem substituem o teste no telefone.
 
 ### Ainda exige placa e telefone físicos
 

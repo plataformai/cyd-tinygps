@@ -7,7 +7,7 @@ Trabalhe fora do monorepo. Não crie um projeto vazio no Android Studio nem copi
 estes arquivos sobre outro projeto Android.
 
 O app usa código Android local para ler notificações do Google Maps e comunicar
-por BLE com a ESP32. A velocidade vem da localização do telefone. **Expo Go e
+por BLE com a ESP32. A velocidade e o rumo de deslocamento vêm da localização do telefone. **Expo Go e
 preview web não executam essas integrações nativas.**
 
 ## Diagnosticar instruções do Maps
@@ -28,7 +28,27 @@ O app distingue estes estados:
 
 Os testes do parser usam exemplos sintéticos; não substituem a confirmação com
 uma rota real. Atualizar este código nativo exige gerar e instalar um novo APK,
-mas não exige trocar o firmware da placa.
+e esta versão com bússola/distância restante também exige atualizar o firmware da placa.
+
+## Bússola GPS e distância ao destino
+
+- A bússola mostra rumo de deslocamento, não a direção física do celular. Ative
+  **Ativar GPS: velocidade e rumo**, permitindo localização em segundo plano.
+- O rumo exige fix de até 5 segundos, precisão horizontal de até 35 m e deslocamento
+  de pelo menos 5,4 km/h. Parado ou sem dado confiável aparece `—`; na placa, `--`.
+- A distância ao destino vem do resumo público da notificação do Maps, não da
+  próxima curva nem de um cálculo em linha reta. Funciona independentemente de
+  reconhecer a manobra. Resumos ausentes/incompatíveis ficam indisponíveis.
+- O resumo é enviado pelo Android nativo enquanto o Maps está em primeiro plano.
+  Reenvios a cada 5 segundos não renovam uma fonte com mais de 120 segundos.
+  Remoção da rota ou perda de validade limpa o valor; o firmware também expira o
+  resumo em no máximo 30 segundos sem renovação e o rumo em 8 segundos.
+- As escritas BLE são serializadas. Se uma confirmação expirar, reconecte à placa.
+- **Enviar instrução de teste** envia curva a 350 m, **45° NE e 3,9 km** por até
+  oito segundos. O app identifica esses valores como TESTE; dados reais podem
+  substituí-los. Eles não são uma medição real de localização.
+- Os ZIPs continuam sendo código-fonte: é necessário compilar/gravar o firmware e
+  gerar/instalar um novo APK. Não há nova biblioteca Arduino nem sensor adicional.
 
 ## Requisitos
 
@@ -130,7 +150,7 @@ dependentes de Metro; não confunda esse APK com uma build de distribuição aut
   notificações, Bluetooth e localização.
 - Somente as notificações do pacote Google Maps são tratadas pela integração.
 - Localização em segundo plano e serviço de localização são necessários para
-  enviar velocidade enquanto o Google Maps estiver em primeiro plano.
+  enviar velocidade e rumo enquanto o Google Maps estiver em primeiro plano.
 - Acesso a câmera, microfone, galeria e armazenamento compartilhado não é necessário.
 
 O módulo `modules/beeline-android` deve ser preservado: o autolinking local do Expo
@@ -149,10 +169,13 @@ declare `expo-modules-core` diretamente. Não remova essa infraestrutura do Grad
    ser a ESP32: verifique os UUIDs, sem escrever valores em dispositivos
    desconhecidos. Ver um UUID depois de conectar não comprova que ele era
    anunciado antes da conexão. Desconecte o nRF Connect antes de usar o BeeLine.
-4. Ative a velocidade GPS e autorize a localização solicitada, inclusive em
+4. Ative o GPS (velocidade e rumo) e autorize a localização solicitada, inclusive em
    segundo plano para uso junto com o Maps.
 5. Confira instruções de uma rota real, reconexão BLE e perda de atualização GPS.
    Não faça esses testes operando o telefone enquanto dirige.
+6. Compare a distância restante com o resumo do Maps. Parado, o rumo deve ficar
+   indisponível; em deslocamento confiável, confirme graus/cardinal e as letras
+   girando no display. Encerre a rota e confira que não fica uma distância antiga.
 
 A geração da estrutura Android (prebuild) não compila Kotlin/Gradle nem valida
 hardware. Consulte `VALIDACAO.md`, quando incluído, para os checks realmente feitos

@@ -29,6 +29,8 @@ static void reject(const std::string& raw) {
   assert(currentSpeedKmh == speed && speedAvailable == available && lastSpeedUpdateMs == timestamp);
   assert(display.calls == draws);
 }
+#include "telemetry-checks.h"
+
 int main() {
   static_assert(COLOR_BACKGROUND == 0x2104, "Use neutral dark gray");
   static_assert(COLOR_BLACK == 0x0000, "Use black speed-scale backing");
@@ -270,6 +272,7 @@ int main() {
       }));
   std::cout << "PASS: dark upper screen, full black speed panel and speed-panel-only refresh\n";
   std::cout << "PASS: refresh limit, r0-r3, diagnostic restoration, maneuvers and advertising restart\n";
+  runTelemetryChecks();
   std::cout << "All host firmware checks passed (hardware APIs simulated).\n";
   std::cout << "PASS: explicit service UUID and device name in scan response\n";
 }

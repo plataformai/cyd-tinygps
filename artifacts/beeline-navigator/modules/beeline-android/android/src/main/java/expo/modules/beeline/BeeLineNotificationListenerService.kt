@@ -20,6 +20,11 @@ class BeeLineNotificationListenerService : NotificationListenerService() {
     refreshLatestMapsNotification()
   }
 
+  override fun onListenerDisconnected() {
+    clearLatest()
+    super.onListenerDisconnected()
+  }
+
   override fun onNotificationPosted(sbn: StatusBarNotification) {
     if (sbn.packageName != MAPS_PACKAGE) return
     saveMapsNotification(sbn)
@@ -40,17 +45,24 @@ class BeeLineNotificationListenerService : NotificationListenerService() {
       .filterNot { it.key == sbn.key }
       .maxByOrNull { it.postTime }
     if (replacement != null) saveMapsNotification(replacement)
-    else preferences.edit().remove(LATEST_NOTIFICATION_KEY).apply()
+    else clearLatest()
   }
 
   private fun refreshLatestMapsNotification() {
     val latest = activeMapsNotifications().maxByOrNull { it.postTime }
     val preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
     if (latest == null) {
-      preferences.edit().remove(LATEST_NOTIFICATION_KEY).apply()
+      clearLatest()
     } else {
       saveMapsNotification(latest)
     }
+  }
+
+  private fun clearLatest() {
+    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit().remove(LATEST_NOTIFICATION_KEY).apply()
+    // Explicit lifecycle event: clients must not retain a previous route summary.
+    sendBroadcast(Intent(ACTION_NOTIFICATION_UPDATED).setPackage(packageName)
+      .putExtra(EXTRA_NOTIFICATION, "{}"))
   }
 
   private fun activeMapsNotifications(): List<StatusBarNotification> {

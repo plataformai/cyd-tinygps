@@ -32,6 +32,9 @@ static constexpr uint16_t DISPLAY_ORIENTATION_CHECK_MS = 1200;
 static constexpr size_t MAX_COMMAND_BYTES = 180;
 static constexpr uint8_t MAX_JSON_DEPTH = 5;
 static constexpr uint32_t SPEED_TIMEOUT_MS = 8000;
+static constexpr uint32_t HEADING_TIMEOUT_MS = 8000;
+static constexpr uint32_t ROUTE_TIMEOUT_MS = 30000;
+static constexpr uint32_t MAX_ROUTE_METERS = 40000000;
 static constexpr uint32_t SCREEN_UPDATE_INTERVAL_MS = 100;
 static constexpr uint8_t SERIAL_BYTES_PER_LOOP = 16;
 namespace Layout {
@@ -49,7 +52,7 @@ constexpr uint16_t GRADUATIONS[] = {0, 20, 40, 50, 60, 80, 100, 120, 140};
 constexpr float ARROW_CENTER_Y = 81, ARROW_LENGTH = 53, ARROW_NECK = 17;
 constexpr float SHAFT_HALF_WIDTH = 7, HEAD_HALF_WIDTH = 18;
 constexpr int16_t DIRECTION_Y = 5, DISTANCE_Y = 137, ROAD_Y = 171;
-constexpr unsigned int ROAD_MAX_BYTES = 27, ROAD_PREFIX_BYTES = 24;
+constexpr unsigned int ROAD_MAX_BYTES = 23, ROAD_PREFIX_BYTES = 20;
 }
 static constexpr uint16_t COLOR_BACKGROUND = 0x2104;  // neutral dark gray
 static constexpr uint16_t COLOR_SURFACE = 0x1A2C;
@@ -81,12 +84,17 @@ uint8_t serialCommandLength = 0;
 bool serialCommandOverflow = false;
 bool screenDirty = true;
 bool speedPanelDirty = true;
+bool sidePanelDirty = true;
+bool headingAvailable = false, routeAvailable = false;
+float currentHeading = 0;
+uint32_t remainingMeters = 0, lastHeadingUpdateMs = 0, lastRouteUpdateMs = 0;
+uint32_t routeValidityMs = ROUTE_TIMEOUT_MS;
 uint32_t lastScreenUpdateMs = 0;
 int8_t pendingRotation = DEFAULT_DISPLAY_ROTATION;
 bool pendingRotationTest = false;
 
-// Two independent, fixed-size latest-wins mailboxes. Speed bursts cannot evict
-// navigation. Only POD copies happen under this cross-core critical section:
+// Independent, fixed-size latest-wins mailboxes. Speed bursts cannot evict
+// navigation, heading or route. Only POD copies happen under this critical section:
 // never JSON parsing, allocation, logging or TFT/serial IO.
 struct PendingNavigation {
   char maneuver[MAX_COMMAND_BYTES + 1];
@@ -98,11 +106,24 @@ struct PendingSpeed {
   bool available;
   uint32_t receivedAtMs;
 };
+struct PendingHeading {
+  float degrees;
+  bool available;
+  uint32_t receivedAtMs;
+};
+struct PendingRoute {
+  uint32_t meters;
+  bool available;
+  uint32_t receivedAtMs, ttlMs;
+};
 portMUX_TYPE pendingMux = portMUX_INITIALIZER_UNLOCKED;
 PendingNavigation pendingNavigation = {};
 PendingSpeed pendingSpeed = {};
 bool navigationPending = false;
 bool speedPending = false;
+PendingHeading pendingHeading = {};
+PendingRoute pendingRoute = {};
+bool headingPending = false, routePending = false;
 
 // ArduinoJson stops at the closing brace. Track consumption to reject trailing
 // garbage/second documents and embedded NULs instead of accepting a valid prefix.
@@ -132,6 +153,68 @@ void renderInstruction(const NavigationInstruction& instruction);
 void drawCurrentScreen();
 void applyDisplayRotation(uint8_t rotation, bool rotationTest);
 
+int16_t navigationWidth() { return display.width() * 3 / 4; }
+
+float normalizedHeading(float degrees) {
+  const float angle = fmodf(degrees, 360.0f);
+  return angle < 0 ? angle + 360.0f : angle;
+}
+
+const char* headingCardinal(float degrees) {
+  static const char* const names[] = {"N", "NE", "L", "SE", "S", "SO", "O", "NO"};
+  return names[static_cast<int>(floorf((normalizedHeading(degrees) + 22.5f) / 45.0f)) % 8];
+}
+
+void cardinalPosition(uint8_t index, float heading, int16_t& x, int16_t& y) {
+  const float angle = (index * 90.0f - heading) * PI / 180.0f;
+  const int16_t centerX = navigationWidth() + (display.width() - navigationWidth()) / 2;
+  const float radius = (display.width() - navigationWidth()) / 2.0f - 8;
+  x = centerX + static_cast<int16_t>(roundf(sinf(angle) * radius));
+  y = 60 - static_cast<int16_t>(roundf(cosf(angle) * radius));
+}
+
+String remainingDistanceText() {
+  if (!routeAvailable) return "--";
+  char buffer[24];
+  if (remainingMeters < 1000) snprintf(buffer, sizeof(buffer), "%lu m", static_cast<unsigned long>(remainingMeters));
+  else if (remainingMeters < 100000) snprintf(buffer, sizeof(buffer), "%.1f km", remainingMeters / 1000.0);
+  else snprintf(buffer, sizeof(buffer), "%lu km", static_cast<unsigned long>(remainingMeters / 1000));
+  if (char* decimal = strchr(buffer, '.')) *decimal = ',';
+  return String(buffer);
+}
+
+void drawSidePanel() {
+  const int16_t left = navigationWidth();
+  const int16_t width = display.width() - left;
+  const int16_t cx = left + width / 2, cy = 60;
+  display.fillRect(left, 0, width, Layout::PANEL_TOP, COLOR_BACKGROUND);
+  display.fillCircle(cx, cy, width / 2 - 18, COLOR_SPEED_HIGH);
+  // Fixed north-up pointer shape; only cardinal positions orbit with the course.
+  display.fillTriangle(cx, cy - 16, cx - 9, cy + 12, cx, cy + 7, COLOR_BACKGROUND);
+  display.fillTriangle(cx, cy - 16, cx + 9, cy + 12, cx, cy + 7, COLOR_BACKGROUND);
+  display.setTextDatum(MC_DATUM);
+  display.setTextColor(COLOR_TEXT);
+  if (headingAvailable) {
+    static const char* const labels[] = {"N", "L", "S", "O"};
+    for (uint8_t i = 0; i < 4; ++i) {
+      int16_t x, y;
+      cardinalPosition(i, currentHeading, x, y);
+      display.drawString(labels[i], x, y, 1);
+    }
+    char number[8];
+    snprintf(number, sizeof(number), "%u", static_cast<unsigned int>(roundf(currentHeading)) % 360);
+    display.drawString(String(number) + "\xC2\xB0 " + headingCardinal(currentHeading), cx, 112, 2);
+  } else {
+    // Do not leave old cardinal letters suggesting a currently valid course.
+    display.setTextColor(COLOR_MUTED);
+    display.drawString("--", cx, 112, 2);
+  }
+  display.setTextColor(COLOR_MUTED);
+  display.drawString("DESTINO", cx, 145, 1);
+  display.setTextColor(routeAvailable ? COLOR_TEXT : COLOR_MUTED);
+  display.drawString(remainingDistanceText(), cx, 166, 2);
+}
+
 float maneuverAngle(const String& maneuver) {
   if (maneuver == "slight_left") return -35.0f;
   if (maneuver == "left") return -90.0f;
@@ -147,7 +230,7 @@ void drawArrow(const String& maneuver) {
   const float dirY = -cosf(angle);
   const float perpX = -dirY;
   const float perpY = dirX;
-  const float centerX = display.width() * 0.5f;
+  const float centerX = navigationWidth() * 0.5f;
   const float centerY = Layout::ARROW_CENTER_Y;
   const float tipX = centerX + dirX * Layout::ARROW_LENGTH;
   const float tipY = centerY + dirY * Layout::ARROW_LENGTH;
@@ -257,11 +340,13 @@ void drawIdleScreen() {
   drawBackground();
   display.setTextDatum(TC_DATUM);
   display.setTextColor(COLOR_AMBER);
-  display.drawString("BEELINE", display.width() / 2, 25, 4);
+  display.drawString("BEELINE", navigationWidth() / 2, 25, 4);
   display.setTextColor(COLOR_MUTED);
-  display.drawCentreString("Aguardando instrucoes", display.width() / 2, 81, 2);
+  display.drawCentreString("Aguardando instrucoes", navigationWidth() / 2, 81, 2);
   display.setTextColor(COLOR_TEXT);
-  display.drawCentreString("Conecte pelo app Android", display.width() / 2, 157, 2);
+  display.drawCentreString("Conecte pelo app Android", navigationWidth() / 2, 157,
+                           navigationWidth() < 220 ? 1 : 2);
+  drawSidePanel();
   drawSpeedPanel();
 }
 
@@ -269,21 +354,26 @@ void renderInstruction(const NavigationInstruction& instruction) {
   drawBackground();
   display.setTextDatum(TC_DATUM);
   display.setTextColor(COLOR_MUTED);
-  display.drawString("PROXIMA DIRECAO", display.width() / 2, Layout::DIRECTION_Y, 2);
+  display.drawString("PROXIMA DIRECAO", navigationWidth() / 2, Layout::DIRECTION_Y, 2);
   drawArrow(instruction.maneuver);
 
   display.setTextDatum(MC_DATUM);
   display.setTextColor(COLOR_TEXT);
   display.drawString(String(instruction.distanceMeters) + " m",
-                     display.width() / 2, Layout::DISTANCE_Y, 4);
+                     navigationWidth() / 2, Layout::DISTANCE_Y, 4);
   if (instruction.road.length() > 0) {
     display.setTextColor(COLOR_MUTED);
     String road = instruction.road;
     if (road.length() > Layout::ROAD_MAX_BYTES) {
       road = road.substring(0, Layout::ROAD_PREFIX_BYTES) + "...";
     }
-    display.drawString(road, display.width() / 2, Layout::ROAD_Y, 2);
+    // Fit the label to the left region, including narrower diagnostic rotations.
+    while (road.length() > 0 && display.textWidth(road, 2) > navigationWidth() - 12) {
+      road = road.substring(0, road.length() - 1);
+    }
+    display.drawString(road, navigationWidth() / 2, Layout::ROAD_Y, 2);
   }
+  drawSidePanel();
   drawSpeedPanel();
 }
 
@@ -361,6 +451,38 @@ class CommandCallbacks final : public NimBLECharacteristicCallbacks {
     const char* type = document["type"].as<const char*>();
     // Reject embedded NULs in fields that will become C strings.
     if (document["type"].as<JsonString>().size() != strlen(type)) return;
+    if (strcmp(type, "heading") == 0) {
+      if (!document["valid"].is<bool>()) return;
+      const bool valid = document["valid"].as<bool>();
+      const JsonVariantConst value = document["degrees"];
+      if ((!value.isNull() && !value.is<double>()) || (valid && !value.is<double>())) return;
+      const float degrees = value.isNull() ? -1 : value.as<float>();
+      const bool available = valid && isfinite(degrees) && degrees >= 0 && degrees <= 360;
+      const PendingHeading update{available ? normalizedHeading(degrees) : 0, available, receivedAtMs};
+      portENTER_CRITICAL(&pendingMux);
+      pendingHeading = update;
+      headingPending = true;
+      portEXIT_CRITICAL(&pendingMux);
+      return;
+    }
+    if (strcmp(type, "route") == 0) {
+      if (!document["valid"].is<bool>()) return;
+      const bool valid = document["valid"].as<bool>();
+      const JsonVariantConst value = document["remainingMeters"];
+      if ((!value.isNull() && !value.is<int64_t>()) || (valid && !value.is<int64_t>())) return;
+      const JsonVariantConst ttl = document["ttlMs"];
+      if (!ttl.isNull() && !ttl.is<uint32_t>()) return;
+      if (valid && (ttl.isNull() || ttl.as<uint32_t>() == 0 || ttl.as<uint32_t>() > ROUTE_TIMEOUT_MS)) return;
+      const int64_t meters = value.isNull() ? -1 : value.as<int64_t>();
+      const bool available = valid && meters >= 0 && meters <= MAX_ROUTE_METERS;
+      const PendingRoute update{available ? static_cast<uint32_t>(meters) : 0, available,
+                                receivedAtMs, ttl.isNull() ? ROUTE_TIMEOUT_MS : ttl.as<uint32_t>()};
+      portENTER_CRITICAL(&pendingMux);
+      pendingRoute = update;
+      routePending = true;
+      portEXIT_CRITICAL(&pendingMux);
+      return;
+    }
     if (strcmp(type, "speed") == 0) {
       if (!document["valid"].is<bool>()) return;
       const bool valid = document["valid"].as<bool>();
@@ -416,14 +538,22 @@ int16_t speedMarker(float kmh) {
 void processPendingCommands() {
   PendingNavigation navigation = {};
   PendingSpeed speed = {};
-  bool takeNavigation, takeSpeed;
+  PendingHeading heading = {};
+  PendingRoute route = {};
+  bool takeNavigation, takeSpeed, takeHeading, takeRoute;
   portENTER_CRITICAL(&pendingMux);
   takeNavigation = navigationPending;
   takeSpeed = speedPending;
+  takeHeading = headingPending;
+  takeRoute = routePending;
   if (takeNavigation) navigation = pendingNavigation;
   if (takeSpeed) speed = pendingSpeed;
+  if (takeHeading) heading = pendingHeading;
+  if (takeRoute) route = pendingRoute;
   navigationPending = false;
   speedPending = false;
+  headingPending = false;
+  routePending = false;
   portEXIT_CRITICAL(&pendingMux);
 
   // At most one navigation and one speed per loop, irrespective of burst size.
@@ -456,6 +586,23 @@ void processPendingCommands() {
     if (available) Serial.printf("SPEED=%.1f km/h\n", currentSpeedKmh);
     else Serial.println("SPEED=unavailable");
   }
+  if (takeHeading) {
+    const bool available = heading.available &&
+        static_cast<uint32_t>(millis() - heading.receivedAtMs) < HEADING_TIMEOUT_MS;
+    if (headingAvailable != available || (available && currentHeading != heading.degrees)) sidePanelDirty = true;
+    headingAvailable = available;
+    currentHeading = available ? heading.degrees : 0;
+    lastHeadingUpdateMs = heading.receivedAtMs;
+  }
+  if (takeRoute) {
+    const bool available = route.available &&
+        static_cast<uint32_t>(millis() - route.receivedAtMs) < route.ttlMs;
+    if (routeAvailable != available || (available && remainingMeters != route.meters)) sidePanelDirty = true;
+    routeAvailable = available;
+    remainingMeters = available ? route.meters : 0;
+    lastRouteUpdateMs = route.receivedAtMs;
+    routeValidityMs = route.ttlMs;
+  }
 }
 
 class ServerCallbacks final : public NimBLEServerCallbacks {
@@ -464,6 +611,11 @@ class ServerCallbacks final : public NimBLEServerCallbacks {
   }
 
   void onDisconnect(NimBLEServer*, NimBLEConnInfo&, int) override {
+    portENTER_CRITICAL(&pendingMux);
+    pendingHeading = {0, false, millis()};
+    pendingRoute = {0, false, millis(), ROUTE_TIMEOUT_MS};
+    headingPending = routePending = true;
+    portEXIT_CRITICAL(&pendingMux);
     Serial.println("Android disconnected; advertising again");
     NimBLEDevice::startAdvertising();
   }
@@ -524,13 +676,27 @@ void loop() {
     speedPanelDirty = true;
     Serial.println("SPEED=stale");
   }
+  if (headingAvailable && static_cast<uint32_t>(now - lastHeadingUpdateMs) >= HEADING_TIMEOUT_MS) {
+    headingAvailable = false;
+    currentHeading = 0;
+    sidePanelDirty = true;
+  }
+  if (routeAvailable && static_cast<uint32_t>(now - lastRouteUpdateMs) >= routeValidityMs) {
+    routeAvailable = false;
+    remainingMeters = 0;
+    sidePanelDirty = true;
+  }
   if (!orientationCheckActive &&
       static_cast<uint32_t>(now - lastScreenUpdateMs) >= SCREEN_UPDATE_INTERVAL_MS &&
-      (screenDirty || speedPanelDirty)) {
+      (screenDirty || speedPanelDirty || sidePanelDirty)) {
     if (screenDirty) drawCurrentScreen();
-    else drawSpeedPanel();
+    else {
+      if (speedPanelDirty) drawSpeedPanel();
+      if (sidePanelDirty) drawSidePanel();
+    }
     screenDirty = false;
     speedPanelDirty = false;
+    sidePanelDirty = false;
     lastScreenUpdateMs = now;
   }
   yield();

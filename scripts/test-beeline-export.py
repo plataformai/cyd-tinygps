@@ -17,6 +17,18 @@ ANDROID_PROJECT = os.environ.get("BEELINE_VERIFY_DIR")
 
 
 class StandaloneExportTests(unittest.TestCase):
+    def test_compass_route_sources_match_current_app(self):
+        base = "modules/beeline-android/android/src/main/java/expo/modules/beeline/"
+        files = [
+            "lib/heading.ts", "lib/speed-task.android.ts", "app/index.tsx",
+            base + "RouteSummary.kt", base + "BeeLineAndroidModule.kt",
+            base + "BeeLineNotificationListenerService.kt",
+        ]
+        for name in files:
+            self.assertIn(name, self.names)
+            self.assertEqual(self.zip.read(name),
+                             (ROOT / "artifacts/beeline-navigator" / name).read_bytes())
+
     @classmethod
     def setUpClass(cls):
         cls.zip = zipfile.ZipFile(ZIP)

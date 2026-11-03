@@ -19,6 +19,7 @@ import { useColors } from '@/hooks/useColors';
 import { BeeLineAndroid } from '@/modules/beeline-android';
 import { diagnosticTurn, getMapsNotificationText, makeNavigationCommand, parseMapsInstruction, type Turn } from '@/lib/navigation';
 import { makeSpeedCommand } from '@/lib/speed';
+import { gpsCourse, makeHeadingCommand, courseLabel, formatRemainingDistance } from '@/lib/heading';
 import { SPEED_TASK_NAME } from '@/lib/speed-task';
 
 function turnIcon(maneuver: Turn['maneuver']) {
@@ -46,11 +47,14 @@ export default function HomeScreen() {
   const [operationError, setOperationError] = useState('');
   const [sendingTest, setSendingTest] = useState(false);
   const [speedKmh, setSpeedKmh] = useState<number | null>(null);
+  const [heading, setHeading] = useState<number | null>(null);
+  const [remainingMeters, setRemainingMeters] = useState<number | null>(null);
   const [speedTracking, setSpeedTracking] = useState(false);
   const [speedError, setSpeedError] = useState('');
   const lastNotificationRef = useRef('');
   const sentInstructionRef = useRef('');
   const lastSpeedFixAtRef = useRef(0);
+  const lastCourseFixAtRef = useRef(0);
   const isConnected = connectionState === 'connected';
   const message = makeNavigationCommand(diagnosticTurn, 1761600000000);
   const notificationNotParsed = mapsReadState === 'unsupported';
@@ -61,6 +65,8 @@ export default function HomeScreen() {
     try {
       const enabled = await BeeLineAndroid.isNotificationAccessEnabled();
       setNotificationEnabled(enabled);
+      const route = enabled ? await BeeLineAndroid.getRouteSummary() : null;
+      setRemainingMeters(route && route.validUntil > Date.now() ? route.remainingMeters : null);
       if (!enabled) {
         lastNotificationRef.current = '';
         setCapturedNotificationText('');
@@ -92,6 +98,7 @@ export default function HomeScreen() {
         ? `Instrução recebida do Maps às ${new Date(notification.postedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`
         : 'O Maps publicou uma notificação sem manobra compatível.');
     } catch (error) {
+      setRemainingMeters(null);
       setMapsReadState('error');
       setOperationError(error instanceof Error ? error.message : 'Falha ao ler notificações do Android.');
     }
@@ -102,6 +109,7 @@ export default function HomeScreen() {
       ? BeeLineAndroid.addConnectionListener((event) => {
           setConnectionState(event.state);
           setConnectionMessage(event.message);
+          if (event.state !== 'connected') sentInstructionRef.current = '';
           if (event.state === 'error') setOperationError(event.message);
           else setOperationError('');
         })
@@ -149,6 +157,7 @@ export default function HomeScreen() {
     if (speedTracking) {
       const staleCheck = setInterval(() => {
         if (Date.now() - lastSpeedFixAtRef.current > 10_000) setSpeedKmh(null);
+        if (Date.now() - lastCourseFixAtRef.current > 5000) setHeading(null);
       }, 1000);
       Location.watchPositionAsync(
         { accuracy: Location.Accuracy.High, timeInterval: 1000, distanceInterval: 0 },
@@ -158,6 +167,9 @@ export default function HomeScreen() {
           const valid = fresh && metersPerSecond !== null && metersPerSecond >= 0;
           lastSpeedFixAtRef.current = valid ? location.timestamp : 0;
           setSpeedKmh(valid ? metersPerSecond * 3.6 : null);
+          const course = gpsCourse(location);
+          setHeading(course);
+          lastCourseFixAtRef.current = course === null ? 0 : location.timestamp;
         },
       ).then((watcher) => {
         if (mounted) subscription = watcher;
@@ -191,8 +203,13 @@ export default function HomeScreen() {
         }
         setSpeedTracking(false);
         setSpeedKmh(null);
+        setHeading(null);
         lastSpeedFixAtRef.current = 0;
-        await BeeLineAndroid.writeCommand(makeSpeedCommand(null));
+        lastCourseFixAtRef.current = 0;
+        await Promise.all([
+          BeeLineAndroid.writeCommand(makeSpeedCommand(null)),
+          BeeLineAndroid.writeCommand(makeHeadingCommand(null)),
+        ]);
         return;
       }
       if (!isConnected) {
@@ -255,8 +272,8 @@ export default function HomeScreen() {
           timeInterval: 1000,
           distanceInterval: 0,
           foregroundService: {
-            notificationTitle: 'BeeLine atualizando velocidade',
-            notificationBody: 'A velocidade GPS está sendo enviada à sua placa.',
+            notificationTitle: 'BeeLine atualizando GPS',
+            notificationBody: 'Velocidade e direção do deslocamento sendo enviadas à placa.',
             killServiceOnDestroy: false,
           },
         });
@@ -331,7 +348,11 @@ export default function HomeScreen() {
     setOperationError('');
     try {
       await BeeLineAndroid.writeCommand(makeNavigationCommand(diagnosticTurn));
-      setNotificationStatus('Instrução de teste enviada; confira seta, distância e via no TFT.');
+      await BeeLineAndroid.writeCommand(makeHeadingCommand(45));
+      await BeeLineAndroid.writeCommand(JSON.stringify({
+        type: 'route', valid: true, remainingMeters: 3900, ttlMs: 8000, diagnostic: true,
+      }));
+      setNotificationStatus('TESTE enviado: curva a 350 m, rumo 45° NE e destino a 3,9 km por até 8 segundos. Dados reais podem substituir o teste.');
     } catch (error) {
       setOperationError(error instanceof Error ? error.message : 'Falha ao enviar instrução de teste.');
     } finally {
@@ -421,6 +442,16 @@ export default function HomeScreen() {
               </Text>
             </View>
           )}
+        </View>
+        <View style={styles.telemetryRow}>
+          <View>
+            <Text style={[styles.cardEyebrow, { color: colors.mutedForeground }]}>RUMO GPS</Text>
+            <Text style={[styles.telemetryValue, { color: colors.foreground }]}>{courseLabel(heading)}</Text>
+          </View>
+          <View>
+            <Text style={[styles.cardEyebrow, { color: colors.mutedForeground }]}>RESTANTE AO DESTINO</Text>
+            <Text style={[styles.telemetryValue, { color: colors.foreground }]}>{formatRemainingDistance(remainingMeters)}</Text>
+          </View>
         </View>
         <Text style={[styles.demoNote, { color: colors.mutedForeground }]}>
           {notificationStatus}{!liveTurn ? ' Use “Enviar instrução de teste” para verificar a placa sem uma rota.' : ''}
@@ -526,7 +557,7 @@ export default function HomeScreen() {
           </View>
           <View style={styles.setupCopy}>
             <Text style={[styles.setupTitle, { color: colors.foreground }]}>Enviar instrução de teste</Text>
-            <Text style={[styles.setupDetail, { color: colors.mutedForeground }]}>350 m · direita · Rua Haddock Lobo</Text>
+            <Text style={[styles.setupDetail, { color: colors.mutedForeground }]}>350 m · 45° NE · destino a 3,9 km</Text>
           </View>
           <Feather name="send" size={17} color={colors.mutedForeground} />
         </Pressable>
@@ -534,7 +565,7 @@ export default function HomeScreen() {
         <View style={[styles.speedCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.speedReadout}>
             <View>
-              <Text style={[styles.cardEyebrow, { color: colors.mutedForeground }]}>VELOCIDADE GPS</Text>
+              <Text style={[styles.cardEyebrow, { color: colors.mutedForeground }]}>GPS · VELOCIDADE E RUMO</Text>
               <Text style={[styles.speedValue, { color: colors.foreground }]}>
                 {speedKmh === null ? '—' : Math.round(speedKmh)}
                 <Text style={[styles.speedUnit, { color: colors.mutedForeground }]}> km/h</Text>
@@ -545,7 +576,10 @@ export default function HomeScreen() {
           <Text style={[styles.speedStatus, { color: speedError ? colors.destructive : colors.mutedForeground }]}>
             {speedError || (speedTracking
               ? 'GPS ativo; transmissão contínua para a placa.'
-              : 'Ative para enviar a velocidade enquanto navega.')}
+              : 'Ative para enviar velocidade e rumo enquanto navega.')}
+          </Text>
+          <Text style={[styles.setupDetail, { color: colors.mutedForeground }]}>
+            O rumo exige deslocamento a partir de 5,4 km/h e precisão GPS de até 35 m. Parado ou sem leitura confiável, aparece —.
           </Text>
           <Pressable
             accessibilityRole="button"
@@ -558,7 +592,7 @@ export default function HomeScreen() {
           >
             <Feather name={speedTracking ? 'pause' : 'map-pin'} size={15} color={colors.accentForeground} />
             <Text style={[styles.primaryActionText, { color: colors.accentForeground }]}>
-              {speedTracking ? 'Parar velocidade GPS' : 'Ativar velocidade GPS'}
+              {speedTracking ? 'Parar GPS' : 'Ativar GPS: velocidade e rumo'}
             </Text>
           </Pressable>
         </View>
@@ -605,6 +639,8 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  telemetryRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginTop: 14 },
+  telemetryValue: { fontSize: 17, fontFamily: 'Inter_600SemiBold', marginTop: 4 },
   safe: { flex: 1 },
   webScroll: { flex: 1, paddingTop: 67, paddingBottom: 34 },
   content: { width: '100%', maxWidth: 520, alignSelf: 'center', paddingHorizontal: 22, paddingTop: 12, paddingBottom: 34 },
