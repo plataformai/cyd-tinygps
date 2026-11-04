@@ -19,28 +19,28 @@ content_type = "image/png"
 id = "X6d5liqvopeFMUbBSZr5-"
 uri = "file://generated-artifacts/beeline-apk.zip"
 type = "unspecified"
-title = "Projeto Android atualizado"
-description = "Projeto independente para gerar o novo APK, com rumo GPS, resumo da rota e escritas BLE serializadas. Não contém APK compilado."
+title = "Projeto independente para gerar APK BeeLine"
+description = "ZIP pronto para abrir como projeto Expo/EAS e iniciar a build do APK; contém o código e configuração Android, não é o arquivo .apk instalável."
 logical_id = "af290ce3-4f7d-4d9a-9714-32ad72ca0cdf"
-content_hash = "sha256:570a3121634d69a9c17b07410a4c3c6fb9638161316d72d610684a62893a83dc"
+content_hash = "sha256:d84b83ea8eef83ed79c20f30f93999ade4ad5497d8cf5aa30fb0b381a9ae0de7"
 size = 1135344
-mtime_ms = 1793708605307
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/fc19b322-5826-4a5a-8f18-489d70042473"
-storage_version_token = "1793708724048104"
+mtime_ms = 1793794470944
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/48c64e5b-6f41-4cca-a323-7eabd6b728e4"
+storage_version_token = "1793794502953910"
 content_type = "application/octet-stream"
 
 [[outputs]]
 id = "pxa-ZW_NUGSwaTXNdmCqZ"
 uri = "file://generated-artifacts/beeline-firmware.zip"
 type = "unspecified"
-title = "Firmware ESP32 — bússola e destino"
-description = "Código-fonte .ino e instruções. Preserva ST7789/BGR e a faixa inferior; requer compilação e gravação na placa."
+title = "Pacote do firmware BeeLine ESP32"
+description = "ZIP com o sketch beeline-esp32.ino e instruções para compilar/gravar na ESP32-2432S028 com Arduino IDE."
 logical_id = "4d874922-3a75-4be6-aedf-726c4109f74b"
-content_hash = "sha256:4dae3bd37d4223b51e5ed474d0c0ce2b6fe744038d908f499aaaed076a92edb9"
-size = 16476
-mtime_ms = 1793708604072
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/28e88be1-cb1c-41be-8917-2d831e40c5f4"
-storage_version_token = "1793708723294430"
+content_hash = "sha256:15fe0ea2cd1b5b5e56aef708b541dd9f833736fc6a2d1f828338b48301485a37"
+size = 16495
+mtime_ms = 1793794471692
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/f4ce0ac2-67de-4ade-8cdf-dc262f2b7d3e"
+storage_version_token = "1793794502354680"
 content_type = "application/octet-stream"
 
 [[outputs]]
