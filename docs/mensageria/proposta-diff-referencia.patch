@@ -1,0 +1,40 @@
+--- a/docs/referencia/google-maps-navegacao-carro-moto.md
++++ b/docs/referencia/google-maps-navegacao-carro-moto.md
+@@ -155,15 +155,15 @@
+ Aplique nesta ordem. Pare na primeira família que casar e só então extraia lado e intensidade.
+ 
+ 1. **Estado:** “recalculando”, “traçando novo trajeto” ou “rerouting” indicam recálculo. “Pesquisando GPS” indica perda de sinal.
+-2. **Chegada:** “chegou” ou “destino”. O lado (“à esquerda/direita”) é parâmetro do destino, não curva.
++2. **Chegada/posição do destino:** exigir frase explícita de chegada ou posição do destino. “Destino” isolado também aparece em resumos e não comprova chegada. Preservar o lado como posição, não curva; distinguir destino próximo de chegada confirmada.
+ 3. **Rotatória:** “rotatória” ou “roundabout”. Extrair o ordinal da saída.
+ 4. **Retorno:** “retorno”, “retorne”, “inversão” ou “u-turn”.
+ 5. **Rampa ou saída:** “saída”, “saia”, “rampa”, “alça”, “entre na rodovia”.
+ 6. **Bifurcação ou manter:** “mantenha-se”, “bifurcação”.
+ 7. **Incorporação:** “incorpore”, “entre no trânsito”.
+ 8. **Curva:** “leve” ou “ligeiramente” (leve), “fechada” ou “acentuada” (fechada); sem qualificador, curva comum.
+-9. **Reto:** “siga em frente”, “continue”.
+-10. **Mudança de nome:** “muda de nome”.
++9. **Mudança de nome:** cláusula explícita “muda de nome”, antes do “continue” genérico.
++10. **Reto:** “siga em frente”, “continue” somente na cláusula de comando e sem contexto de estado, mudança de nome ou nome de via conflitante.
+ 
+ Cuidados:
+ 
+@@ -222,14 +222,15 @@
+ {
+   "channel": "notification",
+   "family": "ROUNDABOUT",
+-  "maneuver": "roundaboutCounterClockwise",
++  "maneuver": "unknown",
++  "circulation": null,
+   "side": null,
+   "exit_number": 2,
+   "distance_m": 200,
+   "street": "Av. Brasil",
+-  "evidence": "text+bitmap",
++  "evidence": "text; exemplo sintético, sem bitmap validado",
+   "is_literal_google": false,
+-  "confidence": 0.8
++  "confidence": null
+ }
+ ```
+ 

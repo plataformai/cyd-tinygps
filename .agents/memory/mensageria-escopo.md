@@ -8,3 +8,9 @@ A evolução de mensageria tem escopo carro e moto e pt-BR inicialmente, deixand
 **Why:** O usuário pediu comparação do comportamento existente com uma referência funcional, para definir um plano antes de enriquecer a mensageria.
 
 **How to apply:** Preservar a referência fornecida sem edições diretas; correções vão em diff separado. Respeitar as marcas [A] oficial, [B] secundária e [C] proposta, registrando a superfície: capacidades do SDK/API não comprovam disponibilidade nas notificações do app Maps. Distinguir verificações locais de validação manual no Android/ESP32.
+
+Durante a evolução textual, reaproveitar as representações visuais existentes quando forem semanticamente compatíveis. Manter uma lista completa de manobras e ícones, distinguindo existentes, parciais e faltantes; desconhecido não deve virar seta de seguir em frente.
+
+**Why:** O usuário solicitou explicitamente esses dois critérios para o plano, deixando novos assets para etapa posterior.
+
+**How to apply:** Avaliar o significado do desenho, não apenas sua disponibilidade; listar separadamente glifo/vetor reaproveitável e imagem dedicada ainda necessária.

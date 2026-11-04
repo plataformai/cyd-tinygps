@@ -1,0 +1,218 @@
+# Registro inicial: nenhuma consulta externa executada nesta análise.
+schema_version: 1
+reference_version: "1.0"
+registry_date: "2026-11-04"
+sources:
+  - id: fonte_01
+    titulo: "Navigation SDK iOS, enum de manobras"
+    url: "https://developers.google.com/maps/documentation/navigation/ios-sdk/reference/objc/Enums/GMSNavigationManeuver"
+    marca: "A"
+    automatica: true
+    superficie: "Navigation SDK iOS, enum de manobras"
+    extrair: "nomes, contagem, descrições de manobras iOS"
+    ultima_verificacao:
+      data: null
+      resultado: nao_verificado
+      sha256_extraido: null
+    baseline_aprovado: null
+  - id: fonte_02
+    titulo: "Navigation SDK iOS, modos de viagem"
+    url: "https://developers.google.com/maps/documentation/navigation/ios-sdk/reference/objc/Enums/GMSNavigationTravelMode"
+    marca: "A"
+    automatica: true
+    superficie: "Navigation SDK iOS, modos de viagem"
+    extrair: "modos iOS e direção de deslocamento"
+    ultima_verificacao:
+      data: null
+      resultado: nao_verificado
+      sha256_extraido: null
+    baseline_aprovado: null
+  - id: fonte_03
+    titulo: "Navigation SDK Android, `Maneuver`"
+    url: "https://developers.google.com/maps/documentation/navigation/android-sdk/reference/com/google/android/libraries/mapsplatform/turnbyturn/model/Maneuver"
+    marca: "A"
+    automatica: true
+    superficie: "Navigation SDK Android, `Maneuver`"
+    extrair: "nomes e contagem Android, diferenças iOS"
+    ultima_verificacao:
+      data: null
+      resultado: nao_verificado
+      sha256_extraido: null
+    baseline_aprovado: null
+  - id: fonte_04
+    titulo: "Feed turn-by-turn"
+    url: "https://developers.google.com/maps/documentation/navigation/android-sdk/tbt-feed"
+    marca: "A"
+    automatica: true
+    superficie: "Feed turn-by-turn"
+    extrair: "campos StepInfo, saída, ordinal, faixa, texto, estados, ETA"
+    ultima_verificacao:
+      data: null
+      resultado: nao_verificado
+      sha256_extraido: null
+    baseline_aprovado: null
+  - id: fonte_05
+    titulo: "Notificações do SDK"
+    url: "https://developers.google.com/maps/documentation/navigation/android-sdk/consolidating-notifications"
+    marca: "A"
+    automatica: true
+    superficie: "Notificações do SDK"
+    extrair: "notificação SDK, foreground/heads-up e limites de superfície"
+    ultima_verificacao:
+      data: null
+      resultado: nao_verificado
+      sha256_extraido: null
+    baseline_aprovado: null
+  - id: fonte_06
+    titulo: "Interrupções em tempo real"
+    url: "https://developers.google.com/maps/documentation/navigation/android-sdk/real-time-disruptions"
+    marca: "A"
+    automatica: true
+    superficie: "Interrupções em tempo real"
+    extrair: "tipos de interrupção e disponibilidade por SDK"
+    ultima_verificacao:
+      data: null
+      resultado: nao_verificado
+      sha256_extraido: null
+    baseline_aprovado: null
+  - id: fonte_07
+    titulo: "Routes API, rota para duas rodas"
+    url: "https://developers.google.com/maps/documentation/routes/route_two_wheel"
+    marca: "A"
+    automatica: true
+    superficie: "Routes API, rota para duas rodas"
+    extrair: "TWO_WHEELER, beta, avisos e condições documentadas"
+    ultima_verificacao:
+      data: null
+      resultado: nao_verificado
+      sha256_extraido: null
+    baseline_aprovado: null
+  - id: fonte_08
+    titulo: "Routes API, países com duas rodas"
+    url: "https://developers.google.com/maps/documentation/routes/coverage-two-wheeled"
+    marca: "A"
+    automatica: true
+    superficie: "Routes API, países com duas rodas"
+    extrair: "lista de países e Brasil"
+    ultima_verificacao:
+      data: null
+      resultado: nao_verificado
+      sha256_extraido: null
+    baseline_aprovado: null
+  - id: fonte_09
+    titulo: "Routes API, enums"
+    url: "https://developers.google.com/maps/documentation/routes/reference/rpc/google.maps.routing.v2"
+    marca: "A"
+    automatica: true
+    superficie: "Routes API, enums"
+    extrair: "enum Routes, DESTINATION, DEPART, NAME_CHANGE, RAMP, UTURN"
+    ultima_verificacao:
+      data: null
+      resultado: nao_verificado
+      sha256_extraido: null
+    baseline_aprovado: null
+  - id: fonte_10
+    titulo: "Directions API legada, respostas"
+    url: "https://developers.google.com/maps/documentation/directions/responses"
+    marca: "A"
+    automatica: true
+    superficie: "Directions API legada, respostas"
+    extrair: "enum Directions e indicação de legado"
+    ultima_verificacao:
+      data: null
+      resultado: nao_verificado
+      sha256_extraido: null
+    baseline_aprovado: null
+  - id: fonte_11
+    titulo: "Ajuda do Maps, navegação"
+    url: "https://support.google.com/maps/answer/3273406"
+    marca: "A"
+    automatica: true
+    superficie: "Ajuda do Maps, navegação"
+    extrair: "literais PT-BR e estado Pesquisando GPS"
+    ultima_verificacao:
+      data: null
+      resultado: nao_verificado
+      sha256_extraido: null
+    baseline_aprovado: null
+  - id: fonte_12
+    titulo: "Ajuda do Maps integrado ao carro"
+    url: "https://support.google.com/maps/answer/9770907"
+    marca: "A"
+    automatica: true
+    superficie: "Ajuda do Maps integrado ao carro"
+    extrair: "14 eventos, rótulos e superfície carro"
+    ultima_verificacao:
+      data: null
+      resultado: nao_verificado
+      sha256_extraido: null
+    baseline_aprovado: null
+  - id: fonte_13
+    titulo: "Ajuda do Maps, notificações"
+    url: "https://support.google.com/maps/answer/6149565"
+    marca: "A"
+    automatica: true
+    superficie: "Ajuda do Maps, notificações"
+    extrair: "categorias e opções, sem inferir corpo de manobra"
+    ultima_verificacao:
+      data: null
+      resultado: nao_verificado
+      sha256_extraido: null
+    baseline_aprovado: null
+  - id: fonte_14
+    titulo: "Ajuda do Maps, trânsito e trajetos"
+    url: "https://support.google.com/maps/answer/6337401"
+    marca: "A"
+    automatica: true
+    superficie: "Ajuda do Maps, trânsito e trajetos"
+    extrair: "trânsito e alternativas de trajeto"
+    ultima_verificacao:
+      data: null
+      resultado: nao_verificado
+      sha256_extraido: null
+    baseline_aprovado: null
+  - id: fonte_15
+    titulo: "Flutter, enum `Maneuver`"
+    url: "https://pub.dev/documentation/google_navigation_flutter/0.7.0/google_navigation_flutter/Maneuver.html"
+    marca: "B"
+    automatica: false
+    superficie: "Flutter, enum `Maneuver`"
+    extrair: "nomes Flutter; corroborar, não transferir IDs"
+    ultima_verificacao:
+      data: null
+      resultado: nao_verificado
+      sha256_extraido: null
+    baseline_aprovado: null
+pendencias:
+  - item: "Contagem e nomes exatos Android versus os66 da referência iOS"
+    resultado: nao_verificado
+  - item: "DESTINATION na Routes API"
+    resultado: nao_verificado
+  - item: "exitNumber e roundaboutTurnNumber no Android"
+    resultado: nao_verificado
+  - item: "fullInstructionText, nome da via e tempo/distância do passo"
+    resultado: nao_verificado
+  - item: "Faixas/isRecommended/maneuverBitmap/laneBitmap e licença"
+    resultado: nao_verificado
+  - item: "Estados ENROUTE REROUTING STOPPED no feed Android"
+    resultado: nao_verificado
+  - item: "ETA, tempo e distância restantes por plataforma"
+    resultado: nao_verificado
+  - item: "TWO_WHEELER no Android, beta/custos e avisos"
+    resultado: nao_verificado
+  - item: "Brasil na lista vigente e mudanças nos países"
+    resultado: nao_verificado
+  - item: "Correspondência de UTURN_RIGHT/LEFT a CW/CCW"
+    resultado: nao_verificado
+  - item: "Descontinuação Directions para novos projetos"
+    resultado: nao_verificado
+  - item: "Literais PT-BR e exemplos com asterisco no anexo"
+    resultado: nao_verificado
+  - item: "Comportamento heads-up é SDK, não consumidor"
+    resultado: nao_verificado
+  - item: "Callouts lentidão/veículo parado desativados: release notes sem URL na lista"
+    resultado: nao_verificado
+  - item: "Licenças/termos de bitmaps e Material Symbols sem URL na lista"
+    resultado: nao_verificado
+  - item: "Fontes secundárias mencionadas sem URL/corpus identificável"
+    resultado: nao_verificado

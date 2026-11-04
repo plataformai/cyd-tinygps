@@ -1,0 +1,127 @@
+{
+  "source": "C — fixtures sintéticas executadas no parser atual, não corpus real",
+  "cases": [
+    {
+      "cenario": "Curva comum",
+      "text": "Vire à esquerda em 100 m",
+      "esperado_semantico": "left com100m",
+      "observado": {
+        "maneuver": "left",
+        "label": "Vire à esquerda",
+        "distanceMeters": 100,
+        "road": ""
+      }
+    },
+    {
+      "cenario": "Leve",
+      "text": "Vire levemente à direita em 100 m",
+      "esperado_semantico": "leve à direita, não curva comum",
+      "observado": {
+        "maneuver": "right",
+        "label": "Vire à direita",
+        "distanceMeters": 100,
+        "road": ""
+      }
+    },
+    {
+      "cenario": "Fechada",
+      "text": "Vire acentuadamente à esquerda em 100 m",
+      "esperado_semantico": "fechada à esquerda",
+      "observado": {
+        "maneuver": "left",
+        "label": "Vire à esquerda",
+        "distanceMeters": 100,
+        "road": ""
+      }
+    },
+    {
+      "cenario": "Destino à direita",
+      "text": "Seu destino está à direita",
+      "esperado_semantico": "chegada ou posição do destino, não curva",
+      "observado": {
+        "maneuver": "right",
+        "label": "Vire à direita",
+        "distanceMeters": 0,
+        "road": ""
+      }
+    },
+    {
+      "cenario": "Rua com Direita",
+      "text": "Continue em frente na Rua Direita",
+      "esperado_semantico": "reto, nome da via não é comando",
+      "observado": {
+        "maneuver": "right",
+        "label": "Vire à direita",
+        "distanceMeters": 0,
+        "road": "Rua Direita"
+      }
+    },
+    {
+      "cenario": "Rotatória",
+      "text": "Na rotatória, pegue a segunda saída em 200 m",
+      "esperado_semantico": "rotatória com ordinal2, sentido desconhecido",
+      "observado": null
+    },
+    {
+      "cenario": "Rampa",
+      "text": "Pegue a saída à direita em 300 m",
+      "esperado_semantico": "saída, não curva comum",
+      "observado": {
+        "maneuver": "right",
+        "label": "Vire à direita",
+        "distanceMeters": 300,
+        "road": ""
+      }
+    },
+    {
+      "cenario": "Recálculo",
+      "text": "Recalculando rota, continue em frente",
+      "esperado_semantico": "estado recálculo antes de manobra",
+      "observado": {
+        "maneuver": "straight",
+        "label": "Siga em frente",
+        "distanceMeters": 0,
+        "road": ""
+      }
+    },
+    {
+      "cenario": "Distância ausente",
+      "text": "Vire à direita",
+      "esperado_semantico": "distância desconhecida, não0",
+      "observado": {
+        "maneuver": "right",
+        "label": "Vire à direita",
+        "distanceMeters": 0,
+        "road": ""
+      }
+    },
+    {
+      "cenario": "Resumo contamina passo",
+      "text": "Vire à direita · 10 min · 3,9 km · Chegada: 17:49",
+      "esperado_semantico": "distância de passo desconhecida, total3900m",
+      "observado": {
+        "maneuver": "right",
+        "label": "Vire à direita",
+        "distanceMeters": 3900,
+        "road": ""
+      }
+    },
+    {
+      "cenario": "Orientação inicial sem verbo reconhecido",
+      "text": "0 m · em direção a R. Exemplo · 10min · 3,9 km · Chegada: 17:49",
+      "esperado_semantico": "texto útil, sem inferir manobra",
+      "observado": null
+    },
+    {
+      "cenario": "Retorno",
+      "text": "Faça o retorno em 50 m",
+      "esperado_semantico": "retorno genérico, sentido desconhecido",
+      "observado": {
+        "maneuver": "uturn",
+        "label": "Faça o retorno",
+        "distanceMeters": 50,
+        "road": ""
+      }
+    }
+  ]
+}

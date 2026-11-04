@@ -154,3 +154,31 @@ mtime_ms = 1793729255320
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/126b6e33-b8c7-4aa8-b085-bd4fb93345fd/5dfc4f67-a0f3-4348-ac45-5fed95419401"
 storage_version_token = "1793729285288860"
 content_type = "image/png"
+
+[[outputs]]
+id = "OgRyCRP0yhKXLYrkzm23F"
+uri = "file://docs/mensageria/matriz-cobertura.csv"
+type = "table"
+title = "Cobertura da mensageria"
+description = "102 itens: 66 manobras, 14 eventos e 22 estados/dados, com lacunas e viabilidade por fonte."
+logical_id = "268f5f55-35b6-44ec-a51d-ad5c1e4a4b5d"
+content_hash = "sha256:95eafe42d22943dcbbe8d70993f9578fbe4cb48ae8e5522f4e72ece170eb281f"
+size = 89574
+mtime_ms = 1793794123413
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/268f5f55-35b6-44ec-a51d-ad5c1e4a4b5d/63c7222a-efb8-4642-abee-3ec271a4fea3"
+storage_version_token = "1793794286225730"
+content_type = "text/csv"
+
+[[outputs]]
+id = "YwxTLOO1Rfn2PsIsHECTc"
+uri = "file://docs/mensageria/matriz-visuais.csv"
+type = "table"
+title = "Inventário de manobras e ícones"
+description = "As 66 manobras, seus desenhos Android/ESP32 atuais, possibilidades de reaproveitamento e ícones faltantes."
+logical_id = "0f7ffbec-766a-4d36-bccd-73d5ba457a16"
+content_hash = "sha256:819b5d83344eeddb2c26eb919955ed6d30ac9b3b8b3cfa012333730e47d50ab7"
+size = 32268
+mtime_ms = 1793794123625
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/0f7ffbec-766a-4d36-bccd-73d5ba457a16/fc3f19a4-6819-404e-bae6-39967ff3efe6"
+storage_version_token = "1793794286835794"
+content_type = "text/csv"
