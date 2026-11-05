@@ -196,3 +196,17 @@ mtime_ms = 1793838704885
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/89fb6de6-4be7-49da-a731-97691d68a322/fd3604d6-792f-4b83-a173-57012d2c4de0"
 storage_version_token = "1793838768284919"
 content_type = "image/png"
+
+[[outputs]]
+id = "GxVsIuVNMLUs5IBD1FDor"
+uri = "file://generated-artifacts/navigation-icon-source-sheet.png"
+type = "image"
+title = "Ícones nomeados do ZIP — 35 desenhos"
+description = "Prancha dos PNGs originais com os nomes dos arquivos; coleção distinta dos 46 códigos da fonte TTF."
+logical_id = "78fbf2a8-b80b-4198-8d55-012de47c223f"
+content_hash = "sha256:e6ca04e89c2fa19e543ba05141b526b2f14ba5ba0177c0a0c1d4d686fe667935"
+size = 36279
+mtime_ms = 1793838883337
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/78fbf2a8-b80b-4198-8d55-012de47c223f/fdab4933-6d06-43d1-a2e3-a16e287d9fce"
+storage_version_token = "1793839077487811"
+content_type = "image/png"
