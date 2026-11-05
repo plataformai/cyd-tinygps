@@ -182,3 +182,17 @@ mtime_ms = 1793794123625
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/0f7ffbec-766a-4d36-bccd-73d5ba457a16/fc3f19a4-6819-404e-bae6-39967ff3efe6"
 storage_version_token = "1793794286835794"
 content_type = "text/csv"
+
+[[outputs]]
+id = "KHKOwVQlTSXn2TvChg0at"
+uri = "file://generated-artifacts/gps-signs-glyphs.png"
+type = "image"
+title = "Prancha dos 46 glifos da fonte IcoMoon"
+description = "Cada símbolo com seu índice e código Unicode, para conferir o mapeamento antes de usar no firmware."
+logical_id = "89fb6de6-4be7-49da-a731-97691d68a322"
+content_hash = "sha256:0eab17ed7ca9c08fb30894e5d14b640f4ed0017ddc7733742d62e4ef3f2d7622"
+size = 68676
+mtime_ms = 1793838704885
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/89fb6de6-4be7-49da-a731-97691d68a322/fd3604d6-792f-4b83-a173-57012d2c4de0"
+storage_version_token = "1793838768284919"
+content_type = "image/png"
