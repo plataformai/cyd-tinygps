@@ -14,3 +14,9 @@ Durante a evolução textual, reaproveitar as representações visuais existente
 **Why:** O usuário solicitou explicitamente esses dois critérios para o plano, deixando novos assets para etapa posterior.
 
 **How to apply:** Avaliar o significado do desenho, não apenas sua disponibilidade; listar separadamente glifo/vetor reaproveitável e imagem dedicada ainda necessária.
+
+O usuário escolheu manter a fonte TTF fornecida como origem dos ícones, em vez de substituí-la pelos PNGs/SVGs do pacote acompanhante.
+
+**Why:** Escolha explícita do usuário ao comparar as duas alternativas de implantação.
+
+**How to apply:** Usar o TTF e seu mapa IcoMoon para definir os desenhos; não trocar silenciosamente a fonte pelos arquivos de imagem. Não tratar uma camada isolada de um ícone composto como uma manobra diferente.

@@ -245,9 +245,39 @@ int main() {
     write(std::string("{\"type\":\"navigation\",\"maneuver\":\"") + maneuver + "\"}");
     tick();
     assert(currentInstruction.maneuver == maneuver);
+    const int index = maneuverIconIndex(maneuver);
+    assert(index >= 0 && index < NavigationFont::kCount);
+    const auto& bitmap = display.bitmaps.back();
+    assert(bitmap.data == NavigationFont::kMasks[index]);
+    assert(bitmap.color == COLOR_AMBER);
+    assert(bitmap.x >= 0 && bitmap.x + bitmap.width <= navigationWidth());
+    assert(bitmap.y > Layout::DIRECTION_Y && bitmap.y + bitmap.height < Layout::DISTANCE_Y);
   }
-  assert(maneuverAngle("left") == -90 && maneuverAngle("right") == 90 &&
-         maneuverAngle("uturn") == 180 && maneuverAngle("straight") == 0);
+  static_assert(sizeof(NavigationFont::kMasks) == 6912, "Keep masks in flash, no framebuffer");
+  assert(NavigationFont::kCodepoints[maneuverIconIndex("straight")] == 0xE91E);
+  assert(NavigationFont::kCodepoints[maneuverIconIndex("left")] == 0xE922);
+  assert(NavigationFont::kCodepoints[maneuverIconIndex("right")] == 0xE921);
+  assert(NavigationFont::kCodepoints[maneuverIconIndex("uturn")] == 0xE92D);
+  const auto bitmapsBeforeUnknown = display.bitmaps.size();
+  write(R"({"type":"navigation","maneuver":"unrecognized"})"); tick();
+  assert(maneuverIconIndex(currentInstruction.maneuver) == -1);
+  assert(display.bitmaps.size() == bitmapsBeforeUnknown);
+  assert(display.textSamples.back().value != "straight");
+  assert(std::find(display.text.begin(), display.text.end(), "?") != display.text.end());
+  // Unknown and straight must not share the old angle-based redraw identity.
+  const int fullBeforeStraight = display.fullDraws;
+  write(R"({"type":"navigation","maneuver":"straight"})"); tick();
+  assert(display.fullDraws == fullBeforeStraight + 1);
+  assert(display.bitmaps.back().data == NavigationFont::kMasks[0]);
+  for (int rotation = 0; rotation < 4; ++rotation) {
+    display.rotation = rotation;
+    drawManeuverIcon("left");
+    const auto& sample = display.bitmaps.back();
+    assert(sample.x >= 0 && sample.x + sample.width <= navigationWidth());
+    assert(sample.y >= 0 && sample.y + sample.height < Layout::PANEL_TOP);
+  }
+  display.rotation = activeDisplayRotation;
+  std::cout << "PASS: six mapped TTF masks, flash budget, bounds and neutral unknown\n";
   NimBLEConnInfo info;
   NimBLEServer* server = NimBLEDevice::createServer();
   const int advertising = NimBLEDevice::getAdvertising()->starts;

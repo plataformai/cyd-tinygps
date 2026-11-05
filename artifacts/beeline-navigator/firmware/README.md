@@ -26,7 +26,7 @@ Esta versão acrescenta rumo GPS e distância restante. Para usar esses dados, a
    #define TFT_BACKLIGHT_ON HIGH
    ```
 
-4. Extraia `beeline-firmware.zip` inteiro e abra `beeline-esp32/beeline-esp32.ino`. O sketch não precisa de arquivos auxiliares. A pasta e o `.ino` têm o mesmo nome, como o Arduino IDE exige. Selecione **ESP32 Dev Module** e envie o sketch. `display.setRotation()` é aplicado no primeiro ciclo do loop. A tela de verificação aparece por 1,2 segundo sem bloquear a inicialização do BLE.
+4. Extraia `beeline-firmware.zip` inteiro e abra `beeline-esp32/beeline-esp32.ino`. **Mantenha `navigation-font.h` na mesma pasta do `.ino`**: ele contém os ícones extraídos da fonte. O ZIP também inclui `LICENSE-font.txt` e este README. A pasta e o `.ino` têm o mesmo nome, como o Arduino IDE exige. Selecione **ESP32 Dev Module** e envie o sketch. `display.setRotation()` é aplicado no primeiro ciclo do loop. A tela de verificação aparece por 1,2 segundo sem bloquear a inicialização do BLE.
 5. Abra o monitor serial em `115200` baud. O resultado esperado inclui `BeeLine-ESP32 ready` e, na primeira passagem do loop com a rotação padrão `1`, `[INFO] Rotacao aplicada: 1 (Largura=320 Altura=240)`.
 6. Para testar a orientação sem recompilar, configure o monitor serial para **Nova linha** (ou **Ambos NL e CR**) e envie `r0`, `r1`, `r2` ou `r3`. O firmware mostra a rotação e a resolução selecionadas por 1,2 segundo, e depois restaura a tela de navegação ou espera. Em geral, `r0` e `r2` são retrato (240 x 320), enquanto `r1` e `r3` são paisagem (320 x 240); a posição visual pode variar conforme a montagem da placa. Escolha a orientação correta e altere `DEFAULT_DISPLAY_ROTATION` para esse valor antes de gravar a versão definitiva. O teste é temporário: reiniciar a placa restaura esse valor padrão.
 7. Se nenhuma rotação resultar em `320 x 240`, confira se `User_Setup_Select.h` seleciona o `User_Setup.h` que você editou, o driver e os pinos da revisão exata da placa. A configuração acima corresponde à placa do usuário que já foi confirmada; outras revisões podem usar um controlador diferente. CS/DC trocados ou driver incorreto normalmente causam falha, imagem corrompida ou ausência de imagem; não são um mecanismo confiável de fallback para retrato. O firmware usa uma única instância global do display.
@@ -52,7 +52,7 @@ Exemplo:
 {"type":"navigation","maneuver":"slight_right","distanceMeters":350,"road":"Rua Haddock Lobo","timestamp":1761600000000}
 ```
 
-Manobras reconhecidas pelo protocolo: `straight`, `slight_left`, `left`, `slight_right`, `right` e `uturn`. O receptor valida o JSON e o tipo antes de entregar os dados à função da tela. `type` e `maneuver` devem ser strings, e a manobra não pode ser vazia. `road` é uma string opcional (padrão vazio) e `distanceMeters` é um inteiro opcional (padrão zero), limitado a 0–65535 como antes. Manobras não reconhecidas mantêm o comportamento anterior de seta para frente. Strings usadas como texto não podem conter NUL embutido.
+Manobras reconhecidas pelo protocolo: `straight`, `slight_left`, `left`, `slight_right`, `right` e `uturn`. O receptor valida o JSON e o tipo antes de entregar os dados à função da tela. `type` e `maneuver` devem ser strings, e a manobra não pode ser vazia. `road` é uma string opcional (padrão vazio) e `distanceMeters` é um inteiro opcional (padrão zero), limitado a 0–65535 como antes. Manobras não reconhecidas mostram `?`, **sem seta direcional inventada**. Strings usadas como texto não podem conter NUL embutido.
 
 Atualização de velocidade enviada pelo app Android:
 
@@ -102,7 +102,32 @@ O texto do rumo usa oito direções em inglês (N, NE, E, SE, S, SW, W, NW), par
 
 ### Firmware e download para build local
 
-Para compilar localmente, baixe `beeline-firmware.zip`, extraia os arquivos e abra `beeline-esp32/beeline-esp32.ino` no Arduino IDE. O ZIP inclui o sketch e este README; não são necessários headers ou assets extras. Não é necessária outra biblioteca Arduino além de **NimBLE-Arduino 2.x, ArduinoJson 7.x e TFT_eSPI** já usadas pelo firmware. Configure o `User_Setup.h` do display como antes e compile/grave normalmente.
+Para compilar localmente, baixe `beeline-firmware.zip`, extraia os arquivos e abra `beeline-esp32/beeline-esp32.ino` no Arduino IDE. Agora **não basta copiar somente o `.ino`**: mantenha `navigation-font.h` junto dele. O ZIP já contém ambos, a licença e este README. Não é necessária outra biblioteca Arduino além de **NimBLE-Arduino 2.x, ArduinoJson 7.x e TFT_eSPI** já usadas pelo firmware. Configure o `User_Setup.h` do display como antes e compile/grave normalmente.
+
+### Ícones da fonte TTF
+
+O usuário escolheu manter o TTF `gps-signs`. Seu `selection.json` identifica **35 ícones completos / 46 códigos Unicode privados**; alguns sinais são composições de duas ou três camadas, não manobras adicionais.
+
+Os seis símbolos atualmente recebidos por BLE são rasterizados do próprio TTF durante a preparação do firmware:
+
+| Comando atual | Código | Nome original IcoMoon |
+|---|---|---|
+| `straight` | U+E91E | nav_direction_continue_straight |
+| `slight_left` | U+E920 | nav_direction_continue_slight_left |
+| `left` | U+E922 | nav_direction_continue_left |
+| `slight_right` | U+E91F | nav_direction_continue_slight_right |
+| `right` | U+E921 | nav_direction_continue_right |
+| `uturn` | U+E92D | nav_continue_uturn |
+
+A placa desenha máscaras monocromáticas de 96×96 bits diretamente da flash, na cor âmbar. As seis máscaras somam **6912 bytes (6,75 KiB) de flash**, além de poucos bytes de metadados/código; não alocam framebuffer ou bitmap em RAM. Não há decodificação de PNG, leitura de TTF, SPIFFS/LittleFS, SD ou upload adicional de arquivos na placa. Os glifos são da fonte, não substituições pelos PNGs/SVGs do ZIP.
+
+`nav_invalid` não significa fallback seguro: seu desenho é uma seta reta. Por isso o firmware não usa esse glifo para comandos desconhecidos. O retorno é um símbolo genérico; não acrescenta informação de sentido horário/anti-horário ao protocolo.
+
+Esta é uma troca visual para as seis manobras existentes: **não exige novo APK**, nem amplia o reconhecimento das notificações do Maps. Não ativa os demais ícones ou as 66 manobras do planejamento de mensageria.
+
+No repositório, `font-source/` preserva TTF e selection originais. `scripts/generate-beeline-font.py` verifica a cobertura dos códigos e os limites geométricos dos contornos contra o TTF, gera `navigation-font.h` e `docs/firmware-font-codes.csv`. `--check` confere os derivados; `--preview` gera pranchas. As dependências Python em `scripts/beeline-font-requirements.txt` são apenas para regeneração, não para compilar no Arduino IDE.
+
+Os desenhos fornecidos têm atribuição a Ssempijja Charles / Navigation Icons, licença MIT preservada em `LICENSE-font.txt` e no header gerado.
 
 ## App Android e validação ponta a ponta
 
@@ -129,7 +154,7 @@ O preview web não acessa BLE, notificações Android nem localização em segun
 
 ### Verificações disponíveis e limite desta alteração
 
-O ZIP de firmware distribuído contém o sketch e este README, com a configuração de placa documentada.
+O ZIP de firmware distribuído contém o sketch, `navigation-font.h`, a licença dos desenhos e este README, com a configuração de placa documentada.
 
 A suíte do sketch foi executada com `ArduinoJson` **7.4.2** e interfaces simuladas de Arduino, FreeRTOS, NimBLE e TFT. Passaram os testes de recepção, navegação, velocidade, área superior cinza-escura, faixa inferior preta, cores da régua, destaques amarelos em 50/100 km/h e rotação. Não foi compilado nem gravado um binário para ESP32, nem medidos heap e latência na placa.
 

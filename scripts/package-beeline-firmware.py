@@ -9,6 +9,8 @@ FIRMWARE = ROOT / "artifacts/beeline-navigator/firmware"
 OUTPUT_DIR = ROOT / "generated-artifacts"
 FILES = (
     "beeline-esp32.ino",
+    "navigation-font.h",
+    "LICENSE-font.txt",
     "README.md",
 )
 

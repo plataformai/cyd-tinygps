@@ -8,6 +8,12 @@ struct TFT_eSPI {
   std::vector<RectSample> rectangles;
   std::vector<LineSample> horizontalLines, verticalLines;
   std::vector<TextSample> textSamples;
+  struct BitmapSample { int x, y, width, height; const uint8_t* data; uint16_t color; };
+  std::vector<BitmapSample> bitmaps;
+  void drawBitmap(int16_t x, int16_t y, const uint8_t* data,
+                  int16_t width, int16_t height, uint16_t color) {
+    touch(); bitmaps.push_back({x, y, width, height, data, color});
+  }
   int rotation = 1, fullDraws = 0, panelDraws = 0, calls = 0;
   int roundRectCalls = 0, activeTextColor = 0;
   std::vector<std::string> text;

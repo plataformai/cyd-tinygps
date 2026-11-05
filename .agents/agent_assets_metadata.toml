@@ -33,14 +33,14 @@ content_type = "application/octet-stream"
 id = "pxa-ZW_NUGSwaTXNdmCqZ"
 uri = "file://generated-artifacts/beeline-firmware.zip"
 type = "unspecified"
-title = "Pacote do firmware BeeLine ESP32"
-description = "ZIP com o sketch beeline-esp32.ino e instruções para compilar/gravar na ESP32-2432S028 com Arduino IDE."
+title = "Firmware BeeLine com ícones da fonte TTF"
+description = "Pacote para Arduino IDE com .ino, navigation-font.h, licença e instruções. Extrair inteiro; os seis ícones atuais já estão incorporados."
 logical_id = "4d874922-3a75-4be6-aedf-726c4109f74b"
-content_hash = "sha256:15fe0ea2cd1b5b5e56aef708b541dd9f833736fc6a2d1f828338b48301485a37"
-size = 16495
-mtime_ms = 1793794471692
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/f4ce0ac2-67de-4ade-8cdf-dc262f2b7d3e"
-storage_version_token = "1793794502354680"
+content_hash = "sha256:b5c0a107f0cdc04e7aa96061ebb53eba3f9f5abf031018a4cfb23be07c786c89"
+size = 21167
+mtime_ms = 1793839397665
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/bb32721c-ef78-48d1-9e06-304dbbda1776"
+storage_version_token = "1793839510935171"
 content_type = "application/octet-stream"
 
 [[outputs]]
@@ -210,3 +210,31 @@ mtime_ms = 1793838883337
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/78fbf2a8-b80b-4198-8d55-012de47c223f/fdab4933-6d06-43d1-a2e3-a16e287d9fce"
 storage_version_token = "1793839077487811"
 content_type = "image/png"
+
+[[outputs]]
+id = "PIGUCRAfXXv35leXhoAn7"
+uri = "file://generated-artifacts/gps-signs-confirmados.png"
+type = "image"
+title = "Mapa visual confirmado — 35 ícones completos"
+description = "Ícones renderizados do próprio TTF com as camadas compostas e os códigos confirmados pelo selection.json."
+logical_id = "7edc44cb-1eac-4328-bb25-9134c189b65c"
+content_hash = "sha256:a225ef45e322de0530a37f22bef30d7564e86e858ce66113080b555cfb179ae5"
+size = 56304
+mtime_ms = 1793839311789
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/7edc44cb-1eac-4328-bb25-9134c189b65c/7c15e1f5-7fee-44af-bed4-c4aadcfc8dd0"
+storage_version_token = "1793839511571623"
+content_type = "image/png"
+
+[[outputs]]
+id = "6GvrOCoEjRP8lPdlovfm9"
+uri = "file://docs/firmware-font-codes.csv"
+type = "table"
+title = "Tabela completa dos 46 códigos da fonte"
+description = "Cada código Unicode, nome do ícone IcoMoon, camada e associação atual com os comandos do firmware."
+logical_id = "7d3e2e0e-7d53-4157-be95-edf09011b135"
+content_hash = "sha256:68cdbec0ff42a06ecfea4ac4df1b730a948ce97067ee964a7247a0592bea55bd"
+size = 2445
+mtime_ms = 1793839311727
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/7d3e2e0e-7d53-4157-be95-edf09011b135/ba26f50c-11f1-46cd-bf6d-ae9b89693369"
+storage_version_token = "1793839512164359"
+content_type = "text/csv"

@@ -20,6 +20,7 @@
 #include <freertos/FreeRTOS.h>
 #include <math.h>
 #include <limits.h>
+#include "navigation-font.h"
 
 static constexpr char DEVICE_NAME[] = "BeeLine-ESP32";
 static constexpr char SERVICE_UUID[] = "7b1e0001-6d2a-4f7a-9c21-8e8a4b12a001";
@@ -49,8 +50,7 @@ constexpr int16_t SPEED_VALUE_Y = 204, SPEED_UNIT_X = 15, SPEED_UNIT_Y = 232;
 constexpr int16_t SCALE_LABEL_Y = 222;
 constexpr uint16_t SCALE_MAX = 140, GREEN_LIMIT = 50, YELLOW_LIMIT = 100;
 constexpr uint16_t GRADUATIONS[] = {0, 20, 40, 50, 60, 80, 100, 120, 140};
-constexpr float ARROW_CENTER_Y = 81, ARROW_LENGTH = 53, ARROW_NECK = 17;
-constexpr float SHAFT_HALF_WIDTH = 7, HEAD_HALF_WIDTH = 18;
+constexpr int16_t ICON_CENTER_Y = 81;
 constexpr int16_t DIRECTION_Y = 5, DISTANCE_Y = 137, ROAD_Y = 171;
 constexpr unsigned int ROAD_MAX_BYTES = 23, ROAD_PREFIX_BYTES = 20;
 }
@@ -215,46 +215,32 @@ void drawSidePanel() {
   display.drawString(remainingDistanceText(), cx, 166, 2);
 }
 
-float maneuverAngle(const String& maneuver) {
-  if (maneuver == "slight_left") return -35.0f;
-  if (maneuver == "left") return -90.0f;
-  if (maneuver == "slight_right") return 35.0f;
-  if (maneuver == "right") return 90.0f;
-  if (maneuver == "uturn") return 180.0f;
-  return 0.0f;
+int8_t maneuverIconIndex(const String& maneuver) {
+  if (maneuver == "straight") return 0;
+  if (maneuver == "slight_left") return 1;
+  if (maneuver == "left") return 2;
+  if (maneuver == "slight_right") return 3;
+  if (maneuver == "right") return 4;
+  if (maneuver == "uturn") return 5;
+  return -1;
 }
 
-void drawArrow(const String& maneuver) {
-  const float angle = maneuverAngle(maneuver) * PI / 180.0f;
-  const float dirX = sinf(angle);
-  const float dirY = -cosf(angle);
-  const float perpX = -dirY;
-  const float perpY = dirX;
-  const float centerX = navigationWidth() * 0.5f;
-  const float centerY = Layout::ARROW_CENTER_Y;
-  const float tipX = centerX + dirX * Layout::ARROW_LENGTH;
-  const float tipY = centerY + dirY * Layout::ARROW_LENGTH;
-  const float neckX = tipX - dirX * Layout::ARROW_NECK;
-  const float neckY = tipY - dirY * Layout::ARROW_NECK;
-  const float baseX = centerX - dirX * Layout::ARROW_NECK;
-  const float baseY = centerY - dirY * Layout::ARROW_NECK;
-  const float shaftHalfWidth = Layout::SHAFT_HALF_WIDTH;
-  const float headHalfWidth = Layout::HEAD_HALF_WIDTH;
-
-  display.fillTriangle(
-      baseX + perpX * shaftHalfWidth, baseY + perpY * shaftHalfWidth,
-      baseX - perpX * shaftHalfWidth, baseY - perpY * shaftHalfWidth,
-      neckX + perpX * shaftHalfWidth, neckY + perpY * shaftHalfWidth,
-      COLOR_AMBER);
-  display.fillTriangle(
-      baseX - perpX * shaftHalfWidth, baseY - perpY * shaftHalfWidth,
-      neckX + perpX * shaftHalfWidth, neckY + perpY * shaftHalfWidth,
-      neckX - perpX * shaftHalfWidth, neckY - perpY * shaftHalfWidth,
-      COLOR_AMBER);
-  display.fillTriangle(
-      tipX, tipY,
-      neckX + perpX * headHalfWidth, neckY + perpY * headHalfWidth,
-      neckX - perpX * headHalfWidth, neckY - perpY * headHalfWidth,
+void drawManeuverIcon(const String& maneuver) {
+  const int8_t index = maneuverIconIndex(maneuver);
+  if (index < 0) {
+    // A glyph named nav_invalid happens to be a straight arrow in this font.
+    // Never use that drawing to suggest a direction for an unknown command.
+    display.setTextDatum(MC_DATUM);
+    display.setTextColor(COLOR_MUTED);
+    display.drawString("?", navigationWidth() / 2, Layout::ICON_CENTER_Y, 4);
+    return;
+  }
+  // Read a monochrome mask directly from flash; zero bits are transparent.
+  // No framebuffer, filesystem, PNG decoder or runtime TTF engine is required.
+  display.drawBitmap(
+      (navigationWidth() - NavigationFont::kWidth) / 2,
+      Layout::ICON_CENTER_Y - NavigationFont::kHeight / 2,
+      NavigationFont::kMasks[index], NavigationFont::kWidth, NavigationFont::kHeight,
       COLOR_AMBER);
 }
 
@@ -355,7 +341,7 @@ void renderInstruction(const NavigationInstruction& instruction) {
   display.setTextDatum(TC_DATUM);
   display.setTextColor(COLOR_MUTED);
   display.drawString("PROXIMA DIRECAO", navigationWidth() / 2, Layout::DIRECTION_Y, 2);
-  drawArrow(instruction.maneuver);
+  drawManeuverIcon(instruction.maneuver);
 
   display.setTextDatum(MC_DATUM);
   display.setTextColor(COLOR_TEXT);
@@ -559,7 +545,7 @@ void processPendingCommands() {
   // At most one navigation and one speed per loop, irrespective of burst size.
   if (takeNavigation) {
     if (!hasNavigationInstruction ||
-        maneuverAngle(currentInstruction.maneuver) != maneuverAngle(navigation.maneuver) ||
+        maneuverIconIndex(currentInstruction.maneuver) != maneuverIconIndex(navigation.maneuver) ||
         currentInstruction.distanceMeters != navigation.distanceMeters ||
         visibleRoad(currentInstruction.road) != visibleRoad(String(navigation.road))) {
       screenDirty = true;
