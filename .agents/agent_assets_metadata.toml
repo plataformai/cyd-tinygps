@@ -33,14 +33,14 @@ content_type = "application/octet-stream"
 id = "pxa-ZW_NUGSwaTXNdmCqZ"
 uri = "file://generated-artifacts/beeline-firmware.zip"
 type = "unspecified"
-title = "Firmware BeeLine com ícones da fonte TTF"
-description = "Pacote para Arduino IDE com .ino, navigation-font.h, licença e instruções. Extrair inteiro; os seis ícones atuais já estão incorporados."
+title = "Baixar firmware atualizado — BeeLine ESP32"
+description = "ZIP com os ícones da fonte TTF. Extraia inteiro e mantenha navigation-font.h na mesma pasta do arquivo .ino."
 logical_id = "4d874922-3a75-4be6-aedf-726c4109f74b"
 content_hash = "sha256:b5c0a107f0cdc04e7aa96061ebb53eba3f9f5abf031018a4cfb23be07c786c89"
 size = 21167
 mtime_ms = 1793839397665
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/bb32721c-ef78-48d1-9e06-304dbbda1776"
-storage_version_token = "1793839510935171"
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/d07dde53-8c34-4a00-9cad-3ddef313bc42"
+storage_version_token = "1793985433969588"
 content_type = "application/octet-stream"
 
 [[outputs]]
