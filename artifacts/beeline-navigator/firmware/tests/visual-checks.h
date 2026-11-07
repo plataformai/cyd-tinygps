@@ -6,7 +6,7 @@ static void runVisualChecks() {
   const TFT_eSPI::TextSample* connect = nullptr;
   bool showsSpeedTitle = false;
   for (const auto& sample : display.textSamples) {
-    assert(sample.value != "BEELINE");
+    assert(sample.value != "PETITGPS TFT");
     if (sample.value == "VELOCIDADE") showsSpeedTitle = true;
     if (sample.value == "Aguardando instrucoes") waiting = &sample;
     if (sample.value == "Conecte pelo app Android") connect = &sample;

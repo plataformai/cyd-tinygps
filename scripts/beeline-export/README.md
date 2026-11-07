@@ -1,7 +1,7 @@
 # Atualização: orientação textual do Maps
 
 Este pacote inclui o reconhecimento de frases como **“em direção a R. Exemplo”**
-mesmo sem indicação de curva. O BeeLine mostra e envia o texto sem inventar uma
+mesmo sem indicação de curva. O PetitGPS mostra e envia o texto sem inventar uma
 seta e sem usar a distância total da rota como distância até a próxima manobra.
 Quando a notificação traz uma distância explicitamente junto dessa frase, o app
 também a exibe abaixo do texto e a envia à placa; o resumo da rota continua
@@ -11,10 +11,10 @@ Velocidade, rumo GPS e distância restante continuam independentes.
 
 O arquivo ZIP é um **projeto-fonte para gerar o APK**, não um APK compilado.
 Use os passos de compilação deste documento. Depois de instalar as duas
-atualizações, confira a orientação com uma rota iniciada e o BeeLine aberto;
+atualizações, confira a orientação com uma rota iniciada e o PetitGPS aberto;
 essa mudança não adiciona um novo serviço nativo de manobras em segundo plano.
 
-# BeeLine Navigator — projeto Android independente
+# PetitGPS — projeto Android independente
 
 Este ZIP contém código-fonte, **não um APK compilado**. Depois de extrair, a pasta do
 projeto deve conter diretamente `package.json`, `app.json`, `eas.json`, `plugins/` e
@@ -105,7 +105,7 @@ git init
 npx eas-cli@latest login
 npx eas-cli@latest init
 git add .
-git commit -m "Initial BeeLine Android project"
+git commit -m "Initial PetitGPS Android project"
 npx eas-cli@latest build -p android --profile preview
 ```
 
@@ -160,7 +160,7 @@ dependentes de Metro; não confunda esse APK com uma build de distribuição aut
 
 ## Identificador Android e permissões
 
-- Nome no celular: **BeeLine Navigator**.
+- Nome no celular: **PetitGPS**.
 - Identificador: **app.beeline.navigator**.
 - Esse app é diferente do antigo `com.anonymous.beelinenavigator`: não o atualiza
   automaticamente e não herda seus dados nem autorizações especiais.
@@ -178,15 +178,15 @@ declare `expo-modules-core` diretamente. Não remova essa infraestrutura do Grad
 
 ## Teste no telefone e na ESP32
 
-1. Ligue a ESP32 com o firmware BeeLine já validado para seu display.
+1. Ligue a ESP32 com o firmware PetitGPS já validado para seu display.
 2. Instale o APK, abra o app e conceda acesso às notificações nas configurações.
-3. Autorize Bluetooth, conecte a BeeLine-ESP32 e envie a instrução de teste.
+3. Autorize Bluetooth, conecte a PetitGPS-ESP32 e envie a instrução de teste.
    A busca aceita o UUID anunciado ou o nome do dispositivo; a conexão só é
    confirmada depois de localizar o serviço e a característica GATT.
    Se a busca expirar, confira a placa no nRF Connect. Um dispositivo N/A pode
    ser a ESP32: verifique os UUIDs, sem escrever valores em dispositivos
    desconhecidos. Ver um UUID depois de conectar não comprova que ele era
-   anunciado antes da conexão. Desconecte o nRF Connect antes de usar o BeeLine.
+   anunciado antes da conexão. Desconecte o nRF Connect antes de usar o PetitGPS.
 4. Ative o GPS (velocidade e rumo) e autorize a localização solicitada, inclusive em
    segundo plano para uso junto com o Maps.
 5. Confira instruções de uma rota real, reconexão BLE e perda de atualização GPS.

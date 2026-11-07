@@ -37,7 +37,7 @@ static void reject(const std::string& raw) {
 int main() {
   static_assert(COLOR_BACKGROUND == 0x2104, "Use neutral dark gray");
   static_assert(COLOR_BLACK == 0x0000, "Use black speed-scale backing");
-  static_assert(COLOR_AMBER == 0xF6A8, "Speed band one matches the BEELINE title");
+  static_assert(COLOR_AMBER == 0xF6A8, "Active speed band matches the PetitGPS title");
   static_assert(COLOR_AMBER > COLOR_SPEED_MIDDLE &&
                 COLOR_SPEED_MIDDLE > COLOR_SPEED_HIGH,
                 "Speed bands get progressively darker");
@@ -80,7 +80,7 @@ int main() {
   assert(display.lastFillScreenColor == COLOR_AMBER);
   assert(std::any_of(display.textSamples.begin(), display.textSamples.end(),
       [](const auto& sample) {
-        return sample.value == "TinyGPS" && sample.x == 160 && sample.y == 102 &&
+        return sample.value == "PetitGPS" && sample.x == 160 && sample.y == 102 &&
                sample.font == 4 && sample.color == COLOR_BLACK;
       }));
   assert(std::any_of(display.textSamples.begin(), display.textSamples.end(),
@@ -415,6 +415,14 @@ int main() {
     if (sample.value == "250 m" && sample.y == Layout::TEXT_DISTANCE_Y) sawTextDistance = true;
   }
   assert(sawTextDistance);
+  display.textSamples.clear();
+  write(R"({"type":"navigation","maneuver":"text","distanceMeters":100,"road":"em direcao a R. Exemplo","timestamp":441})");
+  tick();
+  bool sawHundredTextDistance = false;
+  for (const auto& sample : display.textSamples) {
+    if (sample.value == "100 m" && sample.y == Layout::TEXT_DISTANCE_Y) sawHundredTextDistance = true;
+  }
+  assert(sawHundredTextDistance);
   display.textSamples.clear();
   write(R"({"type":"navigation","maneuver":"text","distanceMeters":0,"road":"em direcao a R. Exemplo","timestamp":45})");
   tick();

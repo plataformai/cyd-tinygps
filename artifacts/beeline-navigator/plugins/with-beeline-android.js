@@ -21,14 +21,14 @@ module.exports = function withBeeLineAndroid(config) {
     manifest['uses-permission'] = permissions;
 
     const application = manifest.application?.[0];
-    if (!application) throw new Error('BeeLine exige uma tag <application> no AndroidManifest.');
+    if (!application) throw new Error('PetitGPS exige uma tag <application> no AndroidManifest.');
     application.service = application.service ?? [];
     const serviceName = 'expo.modules.beeline.BeeLineNotificationListenerService';
     if (!application.service.some((service) => service.$?.['android:name'] === serviceName)) {
       application.service.push({
         $: {
           'android:name': serviceName,
-          'android:label': 'Acesso às notificações do BeeLine',
+          'android:label': 'Acesso às notificações do PetitGPS',
           'android:permission': 'android.permission.BIND_NOTIFICATION_LISTENER_SERVICE',
           'android:exported': 'true',
         },

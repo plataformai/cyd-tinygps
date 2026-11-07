@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "BeeLine Navigator",
+    "name": "PetitGPS",
     "slug": "beeline-navigator",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -22,8 +22,8 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Permita que o BeeLine use a localização para calcular sua velocidade.",
-          "locationAlwaysAndWhenInUsePermission": "Permita que o BeeLine atualize a velocidade durante a navegação, mesmo quando o Google Maps estiver aberto.",
+          "locationWhenInUsePermission": "Permita que o PetitGPS use a localização para calcular sua velocidade.",
+          "locationAlwaysAndWhenInUsePermission": "Permita que o PetitGPS atualize a velocidade durante a navegação, mesmo quando o Google Maps estiver aberto.",
           "isAndroidBackgroundLocationEnabled": true,
           "isAndroidForegroundServiceEnabled": true
         }

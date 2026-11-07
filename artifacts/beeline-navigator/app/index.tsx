@@ -214,7 +214,7 @@ export default function HomeScreen() {
         return;
       }
       if (!isConnected) {
-        setSpeedError('Conecte ao BeeLine-ESP32 antes de ativar a transmissão de velocidade.');
+        setSpeedError('Conecte ao PetitGPS-ESP32 antes de ativar a transmissão de velocidade.');
         return;
       }
 
@@ -224,7 +224,7 @@ export default function HomeScreen() {
         if (!foreground.canAskAgain) {
           Alert.alert(
             'Localização bloqueada',
-            'Habilite a permissão de localização nas configurações do BeeLine.',
+            'Habilite a permissão de localização nas configurações do PetitGPS.',
             [
               { text: 'Agora não', style: 'cancel' },
               { text: 'Abrir configurações', onPress: () => Linking.openSettings().catch(() => undefined) },
@@ -256,7 +256,7 @@ export default function HomeScreen() {
           setSpeedError('Permita notificações para o Android manter o serviço GPS visível.');
           Alert.alert(
             'Notificação necessária',
-            'Permita as notificações do BeeLine para manter visível o serviço de localização em segundo plano.',
+            'Permita as notificações do PetitGPS para manter visível o serviço de localização em segundo plano.',
             [
               { text: 'Agora não', style: 'cancel' },
               { text: 'Abrir configurações', onPress: () => Linking.openSettings().catch(() => undefined) },
@@ -273,7 +273,7 @@ export default function HomeScreen() {
           timeInterval: 1000,
           distanceInterval: 0,
           foregroundService: {
-            notificationTitle: 'BeeLine atualizando GPS',
+            notificationTitle: 'PetitGPS atualizando GPS',
             notificationBody: 'Velocidade e direção do deslocamento sendo enviadas à placa.',
             killServiceOnDestroy: false,
           },
@@ -291,12 +291,12 @@ export default function HomeScreen() {
       return;
     }
     if (notificationEnabled) {
-      Alert.alert('Acesso ativo', 'BeeLine pode ler o texto das notificações publicadas pelo Maps. O Android não expõe dados internos da rota.');
+      Alert.alert('Acesso ativo', 'PetitGPS pode ler o texto das notificações publicadas pelo Maps. O Android não expõe dados internos da rota.');
       return;
     }
     Alert.alert(
       'Permita o acesso às notificações',
-      'O Android solicitará autorização especial para o BeeLine. O listener lê apenas o texto publicado nas notificações do Google Maps; não acessa dados privados nem a rota interna.',
+      'O Android solicitará autorização especial para o PetitGPS. O listener lê apenas o texto publicado nas notificações do Google Maps; não acessa dados privados nem a rota interna.',
       [
         { text: 'Agora não', style: 'cancel' },
         {
@@ -315,7 +315,7 @@ export default function HomeScreen() {
 
   const connectDevice = async () => {
     if (!BeeLineAndroid.available) {
-      Alert.alert('Build Android necessária', 'A conexão BLE requer uma build nativa Android com o módulo BeeLine. Não funciona no preview web ou Expo Go.');
+      Alert.alert('Build Android necessária', 'A conexão BLE requer uma build nativa Android com o módulo do PetitGPS. Não funciona no preview web ou Expo Go.');
       return;
     }
     setOperationError('');
@@ -342,7 +342,7 @@ export default function HomeScreen() {
 
   const sendDiagnostic = async () => {
     if (!isConnected || !BeeLineAndroid.available) {
-      setOperationError('Conecte ao BeeLine-ESP32 antes de enviar a instrução de teste.');
+      setOperationError('Conecte ao PetitGPS-ESP32 antes de enviar a instrução de teste.');
       return;
     }
     setSendingTest(true);
@@ -374,13 +374,13 @@ export default function HomeScreen() {
               <Feather name="navigation" size={20} color={colors.accentForeground} />
             </View>
             <View>
-              <Text style={[styles.brandName, { color: colors.foreground }]}>beeline</Text>
-              <Text style={[styles.brandCaption, { color: colors.mutedForeground }]}>TinyGPS ESP32</Text>
+              <Text style={[styles.brandName, { color: colors.foreground }]}>PetitGPS</Text>
+              <Text style={[styles.brandCaption, { color: colors.mutedForeground }]}>NAVEGADOR ESP32</Text>
             </View>
           </View>
           <View style={[styles.previewPill, { backgroundColor: colors.accent }]}>
             <View
-              accessibilityLabel={isConnected ? 'BeeLine ESP32 conectado' : 'BeeLine ESP32 desconectado'}
+              accessibilityLabel={isConnected ? 'PetitGPS ESP32 conectado' : 'PetitGPS ESP32 desconectado'}
               style={[
                 styles.statusDot,
                 {
@@ -530,7 +530,7 @@ export default function HomeScreen() {
           >
             <Feather name={isConnected ? 'bluetooth' : 'search'} size={16} color={colors.accentForeground} />
             <Text style={[styles.primaryActionText, { color: colors.accentForeground }]}>
-              {isConnected ? 'Desconectar ESP32' : connectionState === 'searching' || connectionState === 'connecting' ? 'Procurando BeeLine…' : 'Conectar BeeLine-ESP32'}
+              {isConnected ? 'Desconectar ESP32' : connectionState === 'searching' || connectionState === 'connecting' ? 'Procurando PetitGPS…' : 'Conectar PetitGPS-ESP32'}
             </Text>
           </Pressable>
           {operationError ? (

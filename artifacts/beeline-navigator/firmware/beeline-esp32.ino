@@ -1,5 +1,5 @@
 /*
- * BeeLine ESP32 BLE receiver
+ * PetitGPS ESP32 BLE receiver
  *
  * Arduino IDE libraries:
  *   - NimBLE-Arduino 2.x
@@ -26,7 +26,7 @@
 #include "navigation-font.h"
 #include "touch-calibration.h"
 
-static constexpr char DEVICE_NAME[] = "BeeLine-ESP32";
+static constexpr char DEVICE_NAME[] = "PetitGPS-ESP32";
 static constexpr char SERVICE_UUID[] = "7b1e0001-6d2a-4f7a-9c21-8e8a4b12a001";
 static constexpr char COMMAND_UUID[] = "7b1e0002-6d2a-4f7a-9c21-8e8a4b12a001";
 static constexpr uint8_t TFT_BACKLIGHT_PIN = 21;
@@ -80,6 +80,7 @@ static constexpr uint16_t COLOR_BLACK = 0x0000;
 static constexpr uint16_t COLOR_AMBER = 0xF6A8;
 static constexpr uint16_t COLOR_DAY_BACKGROUND = 0xFFFF;
 static constexpr uint16_t COLOR_DAY_AMBER = 0x9B40;
+static constexpr uint16_t COLOR_DAY_SPEED_IDLE = 0xDEB4;
 static constexpr uint16_t COLOR_SPEED_MIDDLE = 0xB4A4;
 static constexpr uint16_t COLOR_SPEED_HIGH = 0x7B24;
 static constexpr uint16_t COLOR_TEXT = 0xFFFF;
@@ -512,12 +513,13 @@ void drawSpeedPanel() {
   const int16_t mark50 = scaleX + static_cast<int16_t>(scaleWidth * float(GREEN_LIMIT) / SCALE_MAX);
   const int16_t mark100 = scaleX + static_cast<int16_t>(scaleWidth * float(YELLOW_LIMIT) / SCALE_MAX);
   const int8_t activeBand = speedAvailable ? speedBand(currentSpeedKmh) : -1;
+  const uint16_t idleBandColor = dayMode ? COLOR_DAY_SPEED_IDLE : COLOR_SPEED_HIGH;
   display.fillRect(scaleX, barY, mark50 - scaleX, barHeight,
-                     activeBand == 0 ? COLOR_AMBER : COLOR_SPEED_HIGH);
+                     activeBand == 0 ? COLOR_AMBER : idleBandColor);
   display.fillRect(mark50, barY, mark100 - mark50, barHeight,
-                     activeBand == 1 ? COLOR_AMBER : COLOR_SPEED_HIGH);
+                     activeBand == 1 ? COLOR_AMBER : idleBandColor);
   display.fillRect(mark100, barY, scaleX + scaleWidth - mark100, barHeight,
-                     activeBand == 2 ? COLOR_AMBER : COLOR_SPEED_HIGH);
+                     activeBand == 2 ? COLOR_AMBER : idleBandColor);
 
   for (const uint16_t value : GRADUATIONS) {
     const int16_t x = scaleX + static_cast<int16_t>(scaleWidth * float(value) / SCALE_MAX);
@@ -555,7 +557,7 @@ void drawOrientationCheck(bool rotationTest) {
     display.fillScreen(COLOR_AMBER);
     display.setTextDatum(MC_DATUM);
     display.setTextColor(COLOR_BLACK);
-    display.drawString("TinyGPS", width / 2, height / 2 - 18, 4);
+    display.drawString("PetitGPS", width / 2, height / 2 - 18, 4);
     display.drawString("by Charles Beck Varani", width / 2, height / 2 + 21, 2);
     return;
   }
@@ -564,7 +566,7 @@ void drawOrientationCheck(bool rotationTest) {
   display.drawRect(0, 0, width, height, highlightColor());
   display.setTextDatum(TC_DATUM);
   display.setTextColor(highlightColor());
-  display.drawCentreString("BEELINE TFT", width / 2, height / 2 - 46, 2);
+  display.drawCentreString("PETITGPS TFT", width / 2, height / 2 - 46, 2);
   String status;
   if (rotationTest) {
     status = "ROTATION r";

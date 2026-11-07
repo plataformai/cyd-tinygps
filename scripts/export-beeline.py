@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export BeeLine from tracked sources without copying workspace infrastructure.
+"""Export PetitGPS from tracked sources without copying workspace infrastructure.
 
 Run: python3 scripts/export-beeline.py
 Refresh the internal validation lock after a dependency change:

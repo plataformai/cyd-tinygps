@@ -25,7 +25,7 @@ Incluir o manifesto Expo/npm, configuração EAS, README de uso, código do app,
 assets, configuração Metro/TypeScript, plugin `plugins/with-beeline-android.js`
 e o módulo nativo Android local com seu código-fonte. O ID Android do app
 exportado deve continuar `app.beeline.navigator`; não trocar o nome visível
-BeeLine Navigator nem as integrações nativas necessárias para BLE, notificações
+PetitGPS nem as integrações nativas necessárias para BLE, notificações
 do Maps e GPS.
 
 O ZIP não inclui:
@@ -148,7 +148,7 @@ Não equivalem a compilar/assinar um APK nem a testá-lo num telefone físico.
 5. O `eas init` pode atualizar `app.json` com o ID do projeto da sua conta.
    Configure a identidade Git se solicitada, adicione e faça commit da
    configuração e do lockfile gerado:
-   `git add .` e `git commit -m "Initial BeeLine Android project"`.
+   `git add .` e `git commit -m "Initial PetitGPS Android project"`.
 6. Gere o APK de teste interno com
    `npx eas-cli@latest build -p android --profile preview`.
 7. Baixe o APK indicado pelo EAS e instale no telefone, autorizando a origem do

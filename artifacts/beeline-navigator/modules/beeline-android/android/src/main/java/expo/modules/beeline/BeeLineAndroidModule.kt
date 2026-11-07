@@ -113,7 +113,7 @@ class BeeLineAndroidModule : Module() {
       }
       if (newState == BluetoothProfile.STATE_CONNECTED) {
         bluetoothGatt = gatt
-        emitConnection("connecting", "Conectado; localizando serviço BeeLine…")
+        emitConnection("connecting", "Conectado; localizando serviço PetitGPS…")
         if (!gatt.requestMtu(247)) gatt.discoverServices()
       } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
         abortWrite("Dispositivo desconectado durante a escrita.")
@@ -138,11 +138,11 @@ class BeeLineAndroidModule : Module() {
       }
       val characteristic = gatt.getService(SERVICE_UUID)?.getCharacteristic(COMMAND_UUID)
       if (characteristic == null) {
-        failPendingConnection("O serviço BeeLine não foi encontrado no ESP32.")
+        failPendingConnection("O serviço PetitGPS não foi encontrado no ESP32.")
         return@post
       }
       commandCharacteristic = characteristic
-      emitConnection("connected", "BeeLine-ESP32 conectado")
+      emitConnection("connected", "PetitGPS-ESP32 conectado")
       scheduleRouteUpdate()
       pendingConnection?.let { if (it.isActive) it.resume(Unit) }
       pendingConnection = null
@@ -336,7 +336,7 @@ class BeeLineAndroidModule : Module() {
       return@suspendCancellableCoroutine
     }
     if (pendingConnection?.isActive == true) {
-      continuation.resumeWithException(IllegalStateException("Já existe uma busca ou conexão BeeLine em andamento."))
+      continuation.resumeWithException(IllegalStateException("Já existe uma busca ou conexão PetitGPS em andamento."))
       return@suspendCancellableCoroutine
     }
     requireBluetoothPermission(Manifest.permission.BLUETOOTH_SCAN)
@@ -356,7 +356,7 @@ class BeeLineAndroidModule : Module() {
       return@suspendCancellableCoroutine
     }
 
-    emitConnection("searching", "Procurando BeeLine-ESP32…")
+    emitConnection("searching", "Procurando PetitGPS-ESP32…")
     pendingConnection = continuation
     var deviceFound = false
     val callback = object : ScanCallback() {
@@ -369,7 +369,7 @@ class BeeLineAndroidModule : Module() {
         } catch (_: SecurityException) {
           null
         }
-        if (!advertisedService && deviceName != "BeeLine-ESP32") return
+        if (!advertisedService && deviceName != "PetitGPS-ESP32") return
         deviceFound = true
         stopScan()
         emitConnection("connecting", "Conectando à placa…")
@@ -414,7 +414,7 @@ class BeeLineAndroidModule : Module() {
           stopScan()
           failPendingConnection(
             if (deviceFound) "Placa encontrada, mas a conexão ou descoberta dos serviços BLE expirou."
-            else "Nenhum anúncio BeeLine encontrado. Confira se a placa está ligada e anunciando.",
+            else "Nenhum anúncio PetitGPS encontrado. Confira se a placa está ligada e anunciando.",
           )
         }
       }, 15_000)
@@ -473,7 +473,7 @@ class BeeLineAndroidModule : Module() {
     val gatt = bluetoothGatt
     val characteristic = commandCharacteristic
     if (gatt == null || characteristic == null) {
-      continuation.resumeWithException(IllegalStateException("Conecte ao BeeLine-ESP32 antes de enviar dados."))
+      continuation.resumeWithException(IllegalStateException("Conecte ao PetitGPS-ESP32 antes de enviar dados."))
       return@suspendCancellableCoroutine
     }
     val bytes = command.toByteArray(Charsets.UTF_8)

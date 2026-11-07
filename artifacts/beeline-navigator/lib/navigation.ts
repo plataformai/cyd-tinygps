@@ -21,6 +21,16 @@ function normalized(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
 }
 
+type DistanceMatch = RegExpMatchArray;
+
+function metersFromMatch(match: DistanceMatch): number | null {
+  const value = Number(match[1].replace(',', '.'));
+  if (!Number.isFinite(value)) return null;
+  return Math.min(65535, Math.max(0, Math.round(
+    value * (/^(km|quil)/i.test(match[2]) ? 1000 : 1),
+  )));
+}
+
 export function getMapsNotificationText(notification: MapsNotification): string {
   return [
     notification.title,
@@ -40,24 +50,49 @@ export function parseMapsInstruction(notification: MapsNotification): Turn | nul
   // separate from maneuver matching (e.g. "em direção a Rua Direita").
   const parts = source.split(/[·\n\r]+/).map(part => part.trim()).filter(Boolean);
   const isContext = (part: string) =>
-    /^(?:\d+(?:[.,]\d+)?\s*(?:m|km)\s*[,–-]?\s*)?em direcao (?:a|ao|aos|as)\s+\S/.test(normalized(part));
+    /^(?:\d+(?:[.,]\d+)?\s*(?:m|metros?|km|quilometros?)\s*[,–-]?\s*)?em direcao (?:a|ao|aos|as)\s+\S/.test(normalized(part));
   const contextIndex = parts.findIndex(isContext);
   const contextPart = contextIndex >= 0 ? parts[contextIndex] : undefined;
-  const contextDistanceMatch = contextPart?.match(
+  const contextPrefixDistance = contextPart?.match(
     /^\s*(\d+(?:[.,]\d+)?)\s*(km|quil[oô]metros?|m|metros?)\s*[,–-]?\s*em dire[cç][aã]o\b/i,
-  ) ?? (contextIndex > 0
-    ? parts[contextIndex - 1].match(/^\s*(\d+(?:[.,]\d+)?)\s*(km|quil[oô]metros?|m|metros?)\s*$/i)
-    : null);
-  const contextDistanceValue = contextDistanceMatch
-    ? Number(contextDistanceMatch[1].replace(',', '.'))
+  );
+  const contextSuffixDistance = contextPart?.match(
+    /em dire[cç][aã]o\b.*?[,–-]?\s*(\d+(?:[.,]\d+)?)\s*(km|quil[oô]metros?|m|metros?)\s*$/i,
+  );
+  const parseStandaloneDistance = (part: string | undefined) =>
+    part?.match(/^\s*(\d+(?:[.,]\d+)?)\s*(km|quil[oô]metros?|m|metros?)\s*[.!]?\s*$/i) ?? null;
+  const summaryMarkerNear = (index: number) =>
+    [parts[index - 1], parts[index + 1]].some(part =>
+      part !== undefined && /\b(?:\d+\s*(?:min(?:utos?)?|h(?:oras?)?)|chegada|arrival)\b/.test(normalized(part)),
+    );
+  const previousDistance = contextIndex > 0
+    ? parseStandaloneDistance(parts[contextIndex - 1])
     : null;
-  const contextDistanceMeters = contextDistanceMatch && Number.isFinite(contextDistanceValue)
-    ? Math.min(65535, Math.max(0, Math.round(
-        (contextDistanceValue ?? 0) * (/^(km|quil)/i.test(contextDistanceMatch[2]) ? 1000 : 1),
-      )))
+  const nextDistance = contextIndex >= 0
+    ? parseStandaloneDistance(parts[contextIndex + 1])
     : null;
+  const safePreviousDistance = previousDistance &&
+      !(/^(km|quil)/i.test(previousDistance[2]) && summaryMarkerNear(contextIndex - 1))
+    ? previousDistance : null;
+  const safeNextDistance = nextDistance &&
+      !(/^(km|quil)/i.test(nextDistance[2]) && summaryMarkerNear(contextIndex + 1))
+    ? nextDistance : null;
+  const directDistances = [contextPrefixDistance, contextSuffixDistance].filter(
+    (match): match is DistanceMatch => match !== null && match !== undefined,
+  );
+  const adjacentDistances = [safePreviousDistance, safeNextDistance].filter(
+    (match): match is DistanceMatch => match !== null,
+  );
+  const selectedDistance =
+    directDistances.find(match => metersFromMatch(match) !== null && metersFromMatch(match)! > 0) ??
+    adjacentDistances.find(match => metersFromMatch(match) !== null && metersFromMatch(match)! > 0) ??
+    directDistances[0] ??
+    adjacentDistances[0] ??
+    null;
+  const contextDistanceMeters = selectedDistance ? metersFromMatch(selectedDistance) : null;
   const context = contextPart
     ?.replace(/^\d+(?:[.,]\d+)?\s*(?:m|km)\s*[,–-]?\s*/i, '')
+    ?.replace(contextSuffixDistance ? /[,–-]?\s*\d+(?:[.,]\d+)?\s*(?:km|quil[oô]metros?|m|metros?)\s*$/i : /$^/, '')
     ?.replace(/\s+\d+\s*(?:min(?:utos?)?|h(?:oras?)?)\b.*$/i, '')
     .replace(/\s+chegada\b.*$/i, '').trim();
   const text = normalized(parts.filter(part => !isContext(part)).join(' · '));

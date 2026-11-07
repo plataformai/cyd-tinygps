@@ -1,4 +1,4 @@
-# Mensageria BeeLine — diagnóstico e plano
+# Mensageria PetitGPS — diagnóstico e plano
 
 Análise de 04/11/2026. **Somente documentação: nenhuma funcionalidade foi implantada.**
 

@@ -91,6 +91,9 @@ test('contextual text shows only an explicitly associated distance', () => {
     [{ title: '0 m', text: 'em direção a R. Exemplo', subText: '13 min · 4,3 km · Chegada 11:20' }, 0],
     [{ text: '0,4 km em direção a R. Exemplo · 13 min · 4,3 km' }, 400],
     [{ textLines: '1,2 km · em direção a R. Exemplo\n13 min · 4,3 km' }, 1200],
+    [{ title: '0 m', text: 'em direção a R. Exemplo', textLines: '100 m' }, 100],
+    [{ text: '0 m · em direção a R. Exemplo · 100 m · 13 min · 4,3 km · Chegada 11:20' }, 100],
+    [{ text: 'em direção a R. Exemplo · 100 m' }, 100],
   ]) {
     const turn = parseMapsInstruction(notification(fields));
     assert.equal(turn?.maneuver, 'text');
@@ -99,6 +102,12 @@ test('contextual text shows only an explicitly associated distance', () => {
     assert.equal(wire.distanceMeters, distanceMeters);
     assert.equal(wire.road, 'em direcao a R. Exemplo');
     assert.ok(!JSON.stringify(wire).includes('4,3'));
+  }
+  for (const fields of [
+    { text: 'em direção a R. Exemplo · 13 min · 4,3 km · Chegada 11:20' },
+    { text: 'em direção a R. Exemplo · 4,3 km · 13 min · Chegada 11:20' },
+  ]) {
+    assert.equal(parseMapsInstruction(notification(fields))?.distanceMeters, null);
   }
 });
 

@@ -141,7 +141,7 @@ class StandaloneExportTests(unittest.TestCase):
         self.assertNotIn("ScanFilter.Builder()", native)
         self.assertIn("result.scanRecord?.deviceName", native)
         self.assertIn("result.scanRecord?.serviceUuids", native)
-        self.assertIn('if (!advertisedService && deviceName != "BeeLine-ESP32") return', native)
+        self.assertIn('if (!advertisedService && deviceName != "PetitGPS-ESP32") return', native)
         self.assertIn("scanCallback !== this", native)
         self.assertIn("if (deviceFound)", native)
         self.assertIn("7b1e0001-6d2a-4f7a-9c21-8e8a4b12a001", native)
@@ -165,7 +165,7 @@ class StandaloneExportTests(unittest.TestCase):
     def test_android_and_eas_configuration(self):
         config = self.obj("app.json")["expo"]
         self.assertEqual(config["android"]["package"], "app.beeline.navigator")
-        self.assertEqual(config["name"], "BeeLine Navigator")
+        self.assertEqual(config["name"], "PetitGPS")
         blocked = config["android"]["blockedPermissions"]
         self.assertIn("android.permission.RECORD_AUDIO", blocked)
         self.assertIn("android.permission.READ_EXTERNAL_STORAGE", blocked)

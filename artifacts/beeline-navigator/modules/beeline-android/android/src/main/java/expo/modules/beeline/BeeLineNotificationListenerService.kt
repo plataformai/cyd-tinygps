@@ -71,7 +71,7 @@ class BeeLineNotificationListenerService : NotificationListenerService() {
         ?.filter { it.packageName == MAPS_PACKAGE }
         .orEmpty()
     } catch (error: SecurityException) {
-      Log.w("BeeLineNotifications", "Não foi possível consultar notificações ativas. Confira o acesso às notificações.", error)
+      Log.w("PetitGPSNotifications", "Não foi possível consultar notificações ativas. Confira o acesso às notificações.", error)
       emptyList()
     }
   }

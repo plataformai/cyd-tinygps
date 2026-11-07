@@ -32,7 +32,7 @@ try {
 
 function requireAndroidModule(): BeeLineNativeModule {
   if (!nativeModule) {
-    throw new Error('A integração BeeLine requer uma build nativa Android; ela não funciona no preview web ou Expo Go.');
+    throw new Error('A integração PetitGPS requer uma build nativa Android; ela não funciona no preview web ou Expo Go.');
   }
   return nativeModule;
 }

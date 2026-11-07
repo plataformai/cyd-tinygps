@@ -1,4 +1,4 @@
-# Fonte de ícones no firmware BeeLine
+# Fonte de ícones no firmware PetitGPS
 
 ## Origem e escolha
 O usuário escolheu explicitamente manter a fonte TTF, e não substituí-la pelos PNGs/SVGs do arquivo Navigation Icons. A fonte e o `selection.json` fornecidos ficam em `artifacts/beeline-navigator/firmware/font-source/`, sem alterações. A licença MIT do material gráfico acompanhante está preservada no pacote.

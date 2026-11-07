@@ -1,8 +1,8 @@
-# BeeLine Navigator — firmware ESP32
+# PetitGPS — firmware ESP32
 
-Este sketch cria um periférico BLE chamado `BeeLine-ESP32`, recebe cada instrução como JSON pela característica GATT de escrita e desenha a seta no display integrado da placa ESP32-2432S028.
+Este sketch cria um periférico BLE chamado `PetitGPS-ESP32`, recebe cada instrução como JSON pela característica GATT de escrita e desenha a seta no display integrado da placa ESP32-2432S028.
 
-O firmware recebe rumo GPS, distância restante e orientações do APK BeeLine.
+O firmware recebe rumo GPS, distância restante e orientações do APK PetitGPS.
 Um APK antigo sem esses recursos não envia os campos correspondentes. Se você
 já instalou o APK com suporte à orientação textual, as mudanças visuais e de
 memória da bússola abaixo exigem **somente atualizar o firmware**. Os ZIPs são
@@ -72,17 +72,17 @@ g++ e `ARDUINOJSON_DIR` apontando para ArduinoJson 7.x. A saída fica em
 
 4. Extraia `beeline-firmware.zip` inteiro e abra `beeline-esp32/beeline-esp32.ino`. **Mantenha `navigation-font.h` e `touch-calibration.h` na mesma pasta do `.ino`**: eles contêm os ícones e o cálculo de calibração do touch. O ZIP também inclui `LICENSE-font.txt` e este README. A pasta e o `.ino` têm o mesmo nome, como o Arduino IDE exige. Selecione **ESP32 Dev Module** e envie o sketch. `display.setRotation()` é aplicado no primeiro ciclo do loop. A tela de abertura amarela aparece por 1,2 segundo sem bloquear a inicialização do BLE; largura e altura continuam disponíveis no Monitor Serial.
 5. Na primeira inicialização, toque no centro dos três alvos de calibração. A calibração é salva na NVS da própria placa e só será repetida se for apagada ou se a rotação do display mudar. Depois, toque no ícone sol/lua no canto inferior direito para alternar entre noite e dia. O modo noturno continua sendo o padrão após reiniciar.
-6. Abra o monitor serial em `115200` baud. O resultado esperado inclui `BeeLine-ESP32 ready` e, na primeira passagem do loop com a rotação padrão `1`, `[INFO] Rotacao aplicada: 1 (Largura=320 Altura=240)`.
+6. Abra o monitor serial em `115200` baud. O resultado esperado inclui `PetitGPS-ESP32 ready` e, na primeira passagem do loop com a rotação padrão `1`, `[INFO] Rotacao aplicada: 1 (Largura=320 Altura=240)`.
 7. Para testar a orientação sem recompilar, configure o monitor serial para **Nova linha** (ou **Ambos NL e CR**) e envie `r0`, `r1`, `r2` ou `r3`. O firmware mostra a rotação e a resolução selecionadas por 1,2 segundo, e depois restaura a tela de navegação ou espera. Em geral, `r0` e `r2` são retrato (240 x 320), enquanto `r1` e `r3` são paisagem (320 x 240); a posição visual pode variar conforme a montagem da placa. Escolha a orientação correta e altere `DEFAULT_DISPLAY_ROTATION` para esse valor antes de gravar a versão definitiva. O teste é temporário: reiniciar a placa restaura esse valor padrão.
 8. Se nenhuma rotação resultar em `320 x 240`, confira se `User_Setup_Select.h` seleciona o `User_Setup.h` que você editou, o driver e os pinos da revisão exata da placa. A configuração acima corresponde à placa do usuário que já foi confirmada; outras revisões podem usar um controlador diferente. CS/DC trocados ou driver incorreto normalmente causam falha, imagem corrompida ou ausência de imagem; não são um mecanismo confiável de fallback para retrato. O firmware usa uma única instância global do display.
 
 ## Contrato BLE
 
-O UUID do serviço é incluído no anúncio principal; o nome `BeeLine-ESP32` é
+O UUID do serviço é incluído no anúncio principal; o nome `PetitGPS-ESP32` é
 configurado explicitamente na resposta de scan. São pacotes separados para
 acomodar o UUID de 128 bits e o nome dentro dos limites do advertising BLE.
 O Android busca sem filtro rígido do sistema e aceita somente resultados que
-tenham o UUID anunciado ou o nome BeeLine; depois confirma o serviço e a
+tenham o UUID anunciado ou o nome PetitGPS; depois confirma o serviço e a
 característica GATT. Um UUID visto apenas depois de conectar no nRF Connect
 confirma o serviço GATT, não que esse UUID estivesse no anúncio.
 
@@ -139,7 +139,7 @@ Os UUIDs e os comandos anteriores não mudaram. Os novos comandos também são J
 
 ## Display e variantes da placa
 
-O sketch desenha a seta, distância e nome da via em orientação horizontal. No canto inferior, mostra o valor e `km/h` sem o rótulo `VELOCIDADE`, alinhados verticalmente. A régua colorida vai de 0 a 140 km/h, com graduações de 20 em 20. A faixa que contém a velocidade válida usa amarelo `COLOR_AMBER` também no modo diurno; as outras faixas usam tons progressivamente mais escuros. As marcas verticais e os rótulos de 50 e 100 km/h usam o amarelo-âmbar do título. A régua reserva espaço à direita para o controle dia/noite; a escala, as faixas, os rótulos e o marcador mantêm suas posições proporcionais à largura disponível. O ícone fica à direita da régua, na mesma altura, com margem externa equivalente à margem do bloco de velocidade à esquerda. O indicador visual fica limitado à escala; o número mostra a velocidade recebida. A tela de abertura usa o amarelo-âmbar e mostra `TinyGPS` e `by Charles Beck Varani` centralizados em preto; os diagnósticos `r0`–`r3` permanecem disponíveis. O pinout acima é para a revisão comum da ESP32-2432S028 (CYD); clones e revisões podem usar outro GPIO de backlight ou reset. Se o display ficar apagado, confira a revisão da placa e ajuste o `User_Setup.h` e `TFT_BACKLIGHT_PIN` antes de tentar outra configuração.
+O sketch desenha a seta, distância e nome da via em orientação horizontal. No canto inferior, mostra o valor e `km/h` sem o rótulo `VELOCIDADE`, alinhados verticalmente. A régua colorida vai de 0 a 140 km/h, com graduações de 20 em 20. A faixa que contém a velocidade válida usa amarelo `COLOR_AMBER` também no modo diurno; as outras faixas usam bege claro no modo diurno e tons mais escuros à noite. As marcas verticais e os rótulos de 50 e 100 km/h usam o amarelo-âmbar do título. A régua reserva espaço à direita para o controle dia/noite; a escala, as faixas, os rótulos e o marcador mantêm suas posições proporcionais à largura disponível. O ícone fica à direita da régua, na mesma altura, com margem externa equivalente à margem do bloco de velocidade à esquerda. O indicador visual fica limitado à escala; o número mostra a velocidade recebida. A tela de abertura usa o amarelo-âmbar e mostra `PetitGPS` e `by Charles Beck Varani` centralizados em preto; os diagnósticos `r0`–`r3` permanecem disponíveis. O pinout acima é para a revisão comum da ESP32-2432S028 (CYD); clones e revisões podem usar outro GPIO de backlight ou reset. Se o display ficar apagado, confira a revisão da placa e ajuste o `User_Setup.h` e `TFT_BACKLIGHT_PIN` antes de tentar outra configuração.
 
 A área superior divide-se em 240 pixels à esquerda para manobra e 80 pixels à direita para bússola, rumo e destino. A bússola usa círculo na cor da última faixa da régua e seta cinza-escura fixa para cima. As letras N/E/S/W orbitam o círculo: rumo 0° coloca N acima; rumo 90° coloca E acima e N à esquerda. Não há interpolação que dê uma volta completa na passagem 359°/0°.
 
@@ -210,12 +210,12 @@ O app Android lê somente título/texto de notificações do pacote Google Maps 
 
 O preview web e o Expo Go não incluem código Android customizado. Para testar em um telefone, gere uma build Android nativa com Node.js, pnpm, JDK e Android SDK configurados:
 
-1. Envie o firmware à placa usando os passos de preparação acima. Mantenha a placa ligada e abra o monitor serial em `115200`; confirme `BeeLine-ESP32 ready`.
+1. Envie o firmware à placa usando os passos de preparação acima. Mantenha a placa ligada e abra o monitor serial em `115200`; confirme `PetitGPS-ESP32 ready`.
 2. No diretório `artifacts/beeline-navigator`, rode `pnpm exec expo prebuild --platform android`.
 3. Compile a build de diagnóstico com `cd android && ./gradlew assembleDebug`.
 4. Instale `android/app/build/outputs/apk/debug/app-debug.apk` no telefone (por exemplo, `adb install -r app/build/outputs/apk/debug/app-debug.apk`).
-5. Abra BeeLine, toque em **Acesso ao Google Maps** e permita o acesso nas configurações de **Acesso a notificações**. Volte ao app e confirme o status autorizado.
-6. Desconecte o nRF Connect se estiver usando-o. Toque em **Conectar BeeLine-ESP32** e aceite as permissões Bluetooth solicitadas. O app aceita o nome ou o UUID anunciado e confirma o serviço GATT; confira o estado **CONECTADO**.
+5. Abra PetitGPS, toque em **Acesso ao Google Maps** e permita o acesso nas configurações de **Acesso a notificações**. Volte ao app e confirme o status autorizado.
+6. Desconecte o nRF Connect se estiver usando-o. Toque em **Conectar PetitGPS-ESP32** e aceite as permissões Bluetooth solicitadas. O app aceita o nome ou o UUID anunciado e confirma o serviço GATT; confira o estado **CONECTADO**.
 7. Toque em **Enviar instrução de teste**. O TFT deve mostrar a seta ligeiramente à direita, `350 m` e a via de teste; o monitor serial deve registrar `TURN=slight_right`. Também são enviados **45° NE e destino a 3,9 km**, identificados no app como TESTE e válidos por até oito segundos. Dados reais podem substituir o teste. Não confunda esses valores de bancada com medições de GPS ou rota.
 8. Toque em **Ativar GPS: velocidade e rumo**, permita localização durante o uso e depois localização em segundo plano. A notificação persistente do Android deve informar que o GPS está sendo enviado.
 9. Em local aberto, mova-se com o telefone para obter uma leitura GPS e confira o valor no app, o preenchimento do marcador na régua do TFT e uma linha `SPEED=... km/h` no monitor serial. Parado, a velocidade pode aparecer como zero conforme a leitura do GPS.
