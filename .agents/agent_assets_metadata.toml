@@ -19,14 +19,14 @@ content_type = "image/png"
 id = "X6d5liqvopeFMUbBSZr5-"
 uri = "file://generated-artifacts/beeline-apk.zip"
 type = "unspecified"
-title = "Pacote-fonte do app Android BeeLine"
-description = "Projeto-fonte atualizado para gerar um novo APK; este ZIP não contém APK compilado."
+title = "Última versão do projeto BeeLine Android"
+description = "ZIP do projeto-fonte atualizado para gerar o APK. Não é um arquivo .apk compilado."
 logical_id = "af290ce3-4f7d-4d9a-9714-32ad72ca0cdf"
 content_hash = "sha256:67172870fca631aff8294194c0e58ad4954f5d4ee413aeb986eed18717c57466"
 size = 1136699
 mtime_ms = 1794087056643
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/63d84975-6373-4342-bd7c-6d7d3e9b7014"
-storage_version_token = "1794087184139279"
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/4519aced-e7bd-4e7c-a411-caa2673c8416"
+storage_version_token = "1794087712896414"
 content_type = "application/octet-stream"
 
 [[outputs]]
