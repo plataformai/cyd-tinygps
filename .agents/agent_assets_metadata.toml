@@ -33,14 +33,14 @@ content_type = "application/octet-stream"
 id = "pxa-ZW_NUGSwaTXNdmCqZ"
 uri = "file://generated-artifacts/beeline-firmware.zip"
 type = "unspecified"
-title = "Pacote do firmware BeeLine"
-description = "Firmware Arduino atualizado, incluindo calibração tátil, alternância dia/noite e as dependências documentadas."
+title = "Última versão do firmware BeeLine"
+description = "Pacote atualizado para compilar e gravar na ESP32; inclui calibração do touch e alternância dia/noite."
 logical_id = "4d874922-3a75-4be6-aedf-726c4109f74b"
 content_hash = "sha256:34e04047010a968110e64e0811ee79b9b539d37ea639f5b9ec6215cfdef1b6d5"
 size = 26655
 mtime_ms = 1794087069399
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/1f84a03a-dfa3-4c81-ae87-8f993e00d4be"
-storage_version_token = "1794087184681898"
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/ca692d71-f2bc-4af7-8c5a-cb5c8d383753"
+storage_version_token = "1794087327728004"
 content_type = "application/octet-stream"
 
 [[outputs]]
