@@ -19,14 +19,14 @@ content_type = "image/png"
 id = "X6d5liqvopeFMUbBSZr5-"
 uri = "file://generated-artifacts/beeline-apk.zip"
 type = "unspecified"
-title = "Pacote atualizado do app BeeLine para APK"
-description = "Projeto Android independente atualizado com o envio e a exibição de orientações textuais do Maps sem manobra explícita. ZIP validado; contém o código-fonte para gerar um novo APK, não um APK já compilado."
+title = "BeeLine APK — pacote fonte mais recente"
+description = "ZIP independente atualizado. Contém o código-fonte para gerar o APK, não o arquivo APK compilado. Confirmado: Expo ~58.0.16, React Native 0.88.1 e suporte ao texto do Maps sem manobra explícita."
 logical_id = "af290ce3-4f7d-4d9a-9714-32ad72ca0cdf"
 content_hash = "sha256:a03437201c8692d8f7ccfedcab861e1c115093ccf3b5bff2d4776cd92e04e889"
 size = 1136283
 mtime_ms = 1794072667094
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/b1b4c413-dc5f-48cf-b542-d34ed528e750"
-storage_version_token = "1794072676597528"
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/ccd297a1-3767-422a-999f-3d2c9f78264e"
+storage_version_token = "1794080082856262"
 content_type = "application/octet-stream"
 
 [[outputs]]
