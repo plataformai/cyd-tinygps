@@ -30,6 +30,7 @@ static void reject(const std::string& raw) {
   assert(display.calls == draws);
 }
 #include "telemetry-checks.h"
+#include "visual-checks.h"
 
 int main() {
   static_assert(COLOR_BACKGROUND == 0x2104, "Use neutral dark gray");
@@ -39,6 +40,7 @@ int main() {
                 COLOR_SPEED_MIDDLE > COLOR_SPEED_HIGH,
                 "Speed bands get progressively darker");
   setup();
+  assert(!headingRemembered && !headingAvailable);
   const auto* advertisingConfig = NimBLEDevice::getAdvertising();
   assert(advertisingConfig->scanResponseEnabled);
   assert(advertisingConfig->nameInAdvertisement.empty());
@@ -72,9 +74,9 @@ int main() {
   assert(hasRectangle(0, Layout::PANEL_TOP, display.width(),
                       display.height() - Layout::PANEL_TOP, COLOR_BLACK));
   assert(hasRectangle(Layout::SCALE_X, Layout::BAR_Y, mark50 - Layout::SCALE_X,
-                      Layout::BAR_HEIGHT, COLOR_AMBER));
+                      Layout::BAR_HEIGHT, COLOR_SPEED_HIGH));
   assert(hasRectangle(mark50, Layout::BAR_Y, mark100 - mark50,
-                      Layout::BAR_HEIGHT, COLOR_SPEED_MIDDLE));
+                      Layout::BAR_HEIGHT, COLOR_AMBER));
   assert(hasRectangle(mark100, Layout::BAR_Y,
                       display.width() - Layout::MARGIN - mark100,
                       Layout::BAR_HEIGHT, COLOR_SPEED_HIGH));
@@ -340,6 +342,7 @@ int main() {
   std::cout << "PASS: dark upper screen, full black speed panel and speed-panel-only refresh\n";
   std::cout << "PASS: refresh limit, r0-r3, diagnostic restoration, maneuvers and advertising restart\n";
   runTelemetryChecks();
+  runVisualChecks();
   std::cout << "All host firmware checks passed (hardware APIs simulated).\n";
   std::cout << "PASS: explicit service UUID and device name in scan response\n";
 }

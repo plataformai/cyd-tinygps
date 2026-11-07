@@ -33,14 +33,14 @@ content_type = "application/octet-stream"
 id = "pxa-ZW_NUGSwaTXNdmCqZ"
 uri = "file://generated-artifacts/beeline-firmware.zip"
 type = "unspecified"
-title = "Firmware atualizado — orientação textual"
-description = "Extrair inteiro e manter o .ino e navigation-font.h juntos. Mostra orientações sem manobra identificada e preserva as seis setas existentes."
+title = "Firmware atualizado — visual e memória da bússola"
+description = "Inclui os ajustes da tela de espera, destaque dinâmico das faixas, marcador branco de 2 pixels com triângulo, círculo mais claro e último rumo em RAM até reiniciar. Extraia inteiro, mantendo navigation-font.h junto ao .ino."
 logical_id = "4d874922-3a75-4be6-aedf-726c4109f74b"
-content_hash = "sha256:89fcee70bd9faed6b496cd14f1c1ec079ed9f80c3bca73fb404f851a535521c0"
-size = 22161
-mtime_ms = 1794060899339
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/89b55965-bb16-4c28-a5f7-5ce5d3e81e58"
-storage_version_token = "1794060950889678"
+content_hash = "sha256:11d322ca42519607e8a470837d755c5c9b9c83e13a4af6e127532f27523b837d"
+size = 23393
+mtime_ms = 1794061833963
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/5588a7eb-fb11-4b23-8db4-62f6f35ba147"
+storage_version_token = "1794061845854170"
 content_type = "application/octet-stream"
 
 [[outputs]]
@@ -238,3 +238,17 @@ mtime_ms = 1793839311727
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/7d3e2e0e-7d53-4157-be95-edf09011b135/ba26f50c-11f1-46cd-bf6d-ae9b89693369"
 storage_version_token = "1793839512164359"
 content_type = "text/csv"
+
+[[outputs]]
+id = "0YIF4xPMRebLVciG16pmo"
+uri = "file://generated-artifacts/beeline-validacao-visual.png"
+type = "image"
+title = "Prévia para validação — tela da ESP32"
+description = "Quatro cenários: 35, 75 e 115 km/h com a faixa correspondente destacada, e veículo parado com o último rumo mantido. Posições e cores vêm dos comandos do firmware; fontes representativas, não foto do painel."
+logical_id = "508aba8a-81f1-4a84-a7df-948fc4115d8f"
+content_hash = "sha256:6aebf6ab3a8739d8f26f30f264ee7f519dcf54b7aea399efebd0e36d896fd5b0"
+size = 51389
+mtime_ms = 1794061788659
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/508aba8a-81f1-4a84-a7df-948fc4115d8f/d568d1d9-1fb8-4cff-b424-c5a674ebfff6"
+storage_version_token = "1794061845253125"
+content_type = "image/png"

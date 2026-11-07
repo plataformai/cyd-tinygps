@@ -10,7 +10,7 @@ static void runTelemetryChecks() {
   assert(headingAvailable && currentHeading == 45);
   assert(routeAvailable && remainingMeters == 3900 && remainingDistanceText() == "3,9 km");
   assert(currentInstruction.road == "Intercalado" && speedAvailable);
-  assert(!display.circles.empty() && display.circles.back().color == COLOR_SPEED_HIGH);
+  assert(!display.circles.empty() && display.circles.back().color == COLOR_SPEED_MIDDLE);
   assert(display.circles.back().x == 280 && display.circles.back().radius == 22);
   for (const auto& triangle : display.triangles) {
     if (triangle.x0 >= 240) assert(triangle.x1 >= 240 && triangle.x2 >= 240 &&
@@ -74,7 +74,8 @@ static void runTelemetryChecks() {
       R"({"type":"heading","valid":true,"degrees":1e100})",
       R"({"type":"heading","valid":false,"degrees":null})"}) {
     write(R"({"type":"heading","valid":true,"degrees":45})"); tick();
-    write(invalid); tick(); assert(!headingAvailable);
+    write(invalid); tick();
+    assert(!headingAvailable && headingRemembered && currentHeading == 45);
   }
   for (const char* invalid : {
       R"({"type":"route","valid":true,"remainingMeters":-1,"ttlMs":1000})",
@@ -87,9 +88,10 @@ static void runTelemetryChecks() {
   write(R"({"type":"route","valid":true,"remainingMeters":0,"ttlMs":30000})"); tick();
   assert(routeAvailable && remainingDistanceText() == "0 m");
   write(R"({"type":"heading","valid":true,"degrees":90})"); tick(8000);
-  assert(!headingAvailable && routeAvailable); // A delayed mailbox cannot revive stale course.
+  assert(!headingAvailable && headingRemembered && currentHeading == 45 && routeAvailable);
   write(R"({"type":"heading","valid":true,"degrees":90})"); tick(7999);
-  assert(headingAvailable); tick(1); assert(!headingAvailable);
+  assert(headingAvailable); tick(1);
+  assert(!headingAvailable && headingRemembered && currentHeading == 90);
   write(R"({"type":"route","valid":true,"remainingMeters":3900,"ttlMs":500})"); tick(500);
   assert(!routeAvailable && remainingDistanceText() == "--");
   fakeNow = UINT32_MAX - 4000;
@@ -105,7 +107,9 @@ static void runTelemetryChecks() {
   NimBLEConnInfo info;
   NimBLEDevice::createServer()->callbacks->onDisconnect(NimBLEDevice::createServer(), info, 0);
   tick();
-  assert(!headingAvailable && !routeAvailable);
+  assert(!headingAvailable && !routeAvailable && headingRemembered && currentHeading == 45);
+  assert(std::find(display.text.begin(), display.text.end(), "ULTIMO RUMO") != display.text.end());
   std::cout << "PASS: 80px compass, cardinal orbit, fixed pointer, route formatting and independent mailboxes\n";
+  std::cout << "PASS: last valid GPS course survives invalidation, timeout and disconnect in RAM\n";
   std::cout << "PASS: heading/route validation, expiry, clock wrap, disconnect and partial refresh\n";
 }

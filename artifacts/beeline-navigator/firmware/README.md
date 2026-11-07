@@ -2,7 +2,39 @@
 
 Este sketch cria um periférico BLE chamado `BeeLine-ESP32`, recebe cada instrução como JSON pela característica GATT de escrita e desenha a seta no display integrado da placa ESP32-2432S028.
 
-Esta versão acrescenta rumo GPS e distância restante. Para usar esses dados, atualize **o firmware e o APK** usando os novos pacotes fonte; um APK antigo não envia os novos campos. Os ZIPs não contêm binários compilados.
+O firmware recebe rumo GPS, distância restante e orientações do APK BeeLine.
+Um APK antigo sem esses recursos não envia os campos correspondentes. Se você
+já instalou o APK com suporte à orientação textual, as mudanças visuais e de
+memória da bússola abaixo exigem **somente atualizar o firmware**. Os ZIPs são
+pacotes-fonte, não binários compilados.
+
+## Ajustes visuais e memória temporária do rumo
+
+- A tela de espera não mostra mais o título grande `BEELINE`. As duas mensagens
+  ficam centralizadas como um bloco na região esquerda superior: primeiro
+  `Aguardando instrucoes`, depois uma linha vazia e `Conecte pelo app Android`.
+- Na régua, somente a faixa da velocidade instantânea válida usa `COLOR_AMBER`:
+  0 até 50 inclusive; acima de 50 até 100 inclusive; acima de 100 km/h. As demais
+  usam `COLOR_SPEED_HIGH`. Sem velocidade válida, todas ficam na cor fraca.
+  A indicação visual é limitada a 140; o número pode continuar acima de 140.
+- As marcas e os textos de 50/100 continuam amarelos. O marcador branco passou
+  de 1 para 2 pixels de largura e recebeu um triângulo apontando para baixo,
+  encostado no topo. O conjunto fica na faixa preta, sem cobrir os números.
+- O círculo da bússola usa `COLOR_SPEED_MIDDLE` (a antiga cor da faixa 50–100),
+  mais clara que `COLOR_SPEED_HIGH`.
+- O último rumo GPS válido fica somente na RAM. Parar, receber rumo inválido,
+  perder atualizações de GPS ou desconectar o Bluetooth não apaga essa direção.
+  Sem leitura atualizada, a legenda `ULTIMO RUMO` aparece; uma leitura válida
+  posterior atualiza o desenho e retira a legenda. Antes da primeira leitura,
+  aparece `--`; desligar/reiniciar a placa perde a memória. Não se usa NVS/flash,
+  não se estima rumo parado e não se muda para magnetômetro.
+
+`scripts/render-beeline-preview.py` compila um capturador do sketch real
+(`firmware/tests/render-preview.cpp`) e renderiza suas primitivas em quatro
+cenários. A imagem resultante usa posições e cores RGB565 do firmware, mas
+fontes de desktop representativas: não é fotografia do painel. Requer Pillow,
+g++ e `ARDUINOJSON_DIR` apontando para ArduinoJson 7.x. A saída fica em
+`generated-artifacts/beeline-validacao-visual.png`.
 
 ## Preparar
 
@@ -73,7 +105,7 @@ Os UUIDs e os comandos anteriores não mudaram. Os novos comandos também são J
 {"type":"route","remainingMeters":3900,"valid":true,"ttlMs":30000}
 ```
 
-- `heading`: `valid` é booleano; quando verdadeiro, `degrees` é um número finito entre 0 e 360 (360 equivale a 0). Tipos incorretos não substituem uma mensagem válida pendente. Valores fora do intervalo tornam o rumo indisponível. `{"type":"heading","degrees":null,"valid":false}` limpa a leitura. O prazo local é de **8 segundos**, contado desde a recepção, e desconectar o BLE invalida o rumo.
+- `heading`: `valid` é booleano; quando verdadeiro, `degrees` é um número finito entre 0 e 360 (360 equivale a 0). Tipos incorretos não substituem uma mensagem válida pendente. Valores fora do intervalo, `valid:false`, **8 segundos** sem atualização ou desconexão BLE invalidam a leitura atual, mas **não apagam o último rumo válido armazenado em RAM**. A tela passa a indicar `ULTIMO RUMO`. Um pacote válido só atualiza essa memória se ainda estiver dentro do prazo quando processado.
 - `route`: `remainingMeters` é um inteiro de 0 a 40.000.000, sem o limite de 65.535 aplicado à distância da próxima curva. `ttlMs` é obrigatório com `valid:true`, inteiro de 1 a 30.000. `{"type":"route","remainingMeters":null,"valid":false}` limpa o resumo. Tipos incorretos são descartados; distância negativa ou acima do limite torna o dado indisponível.
 - O Android envia rumo de deslocamento do GPS, **não a orientação física do celular**. Só aceita fix com até 5 segundos de idade, precisão horizontal entre 0 e 35 m e velocidade de pelo menos **1,5 m/s (5,4 km/h)**. Isso evita apresentar deriva de GPS parado como direção confiável. Não usa magnetômetro.
 - O listener nativo lê somente campos públicos das notificações do Maps. Procura distância de resumo ao lado de duração/chegada ou um rótulo explícito de distância restante; uma distância de manobra isolada nunca é usada como total. Por exemplo, `0 m · em direção a uma via · 10min · 3,9 km · Chegada: 17:49` resulta em 3900 m restantes, mesmo sem manobra reconhecida.
@@ -201,7 +233,7 @@ Casos cobertos pela suíte completa:
 - Pacotes vazios, 181 bytes, JSON malformado, tipos incorretos, campos obrigatórios ausentes, NULs embutidos, dados após o objeto e profundidade seis são rejeitados sem alterar o último estado válido. Os limites de exatamente 180 bytes e profundidade cinco são aceitos.
 - Uma navegação seguida de 10.000 velocidades continua disponível; cada posição pendente mantém somente a última mensagem válida de seu tipo. Um pacote rejeitado não limpa navegação pendente.
 - Velocidade repetida renova a recepção sem desenho; leitura explicitamente inválida, negativa ou excessiva mostra indisponível. Timeout em 8000 ms, amostra pendente já vencida e volta do contador de tempo foram verificados.
-- Limite de atualização, número e marcador visíveis iguais sem redesenho, escala de 0–140 com cores progressivamente mais escuras e marcações 50/100 amarelas, manobras, distância limitada, faixa inferior preta, preenchimento sólido, `r0`–`r3` e limite de leitura serial foram exercitados.
+- Limite de atualização, número e marcador visíveis iguais sem redesenho, escala de 0–140 com uma faixa ativa amarela e as outras fracas, marcações 50/100 amarelas, manobras, distância limitada, faixa inferior preta, preenchimento sólido, `r0`–`r3` e limite de leitura serial foram exercitados. Os novos checks cobrem os limites exatos de 50/100, passagens de 0,01 km/h mesmo sem mudar o número arredondado, marcador de 2px/triângulo, centralização da espera e memória do último rumo após invalidação, prazo e desconexão.
 - As interfaces simuladas falham se o callback de escrita tentar desenhar ou imprimir; também falham se houver operações de TFT/serial dentro da seção crítica. O callback de desconexão foi invocado e reiniciou o advertising simulado.
 - A suíte adicional cobre a coluna de 80 pixels, posições cardeais em 0/45/90/180/270/359 graus, seta fixa, passagem pelo norte, formatação da distância, mensagens intercaladas, dados inválidos, expiração, desconexão e volta de `millis()`.
 

@@ -44,6 +44,8 @@ constexpr int16_t MARGIN = 12;
 constexpr int16_t SCALE_X = 96;
 constexpr int16_t BAR_Y = 207;
 constexpr int16_t BAR_HEIGHT = 10;
+constexpr int16_t MARKER_WIDTH = 2, MARKER_TOP_OFFSET = 8;
+constexpr int16_t MARKER_TRIANGLE_HALF_WIDTH = 4, MARKER_TRIANGLE_HEIGHT = 6;
 constexpr int16_t SCALE_BACKING_PADDING = 4;
 constexpr int16_t SPEED_LABEL_X = 13, SPEED_LABEL_Y = 196;
 constexpr int16_t SPEED_VALUE_Y = 204, SPEED_UNIT_X = 15, SPEED_UNIT_Y = 232;
@@ -86,6 +88,7 @@ bool screenDirty = true;
 bool speedPanelDirty = true;
 bool sidePanelDirty = true;
 bool headingAvailable = false, routeAvailable = false;
+bool headingRemembered = false; // RAM only: last valid GPS course until reboot.
 float currentHeading = 0;
 uint32_t remainingMeters = 0, lastHeadingUpdateMs = 0, lastRouteUpdateMs = 0;
 uint32_t routeValidityMs = ROUTE_TIMEOUT_MS;
@@ -188,13 +191,13 @@ void drawSidePanel() {
   const int16_t width = display.width() - left;
   const int16_t cx = left + width / 2, cy = 60;
   display.fillRect(left, 0, width, Layout::PANEL_TOP, COLOR_BACKGROUND);
-  display.fillCircle(cx, cy, width / 2 - 18, COLOR_SPEED_HIGH);
+  display.fillCircle(cx, cy, width / 2 - 18, COLOR_SPEED_MIDDLE);
   // Fixed north-up pointer shape; only cardinal positions orbit with the course.
   display.fillTriangle(cx, cy - 16, cx - 9, cy + 12, cx, cy + 7, COLOR_BACKGROUND);
   display.fillTriangle(cx, cy - 16, cx + 9, cy + 12, cx, cy + 7, COLOR_BACKGROUND);
   display.setTextDatum(MC_DATUM);
   display.setTextColor(COLOR_TEXT);
-  if (headingAvailable) {
+  if (headingRemembered) {
     static const char* const labels[] = {"N", "E", "S", "W"};
     for (uint8_t i = 0; i < 4; ++i) {
       int16_t x, y;
@@ -204,8 +207,12 @@ void drawSidePanel() {
     char number[8];
     snprintf(number, sizeof(number), "%u", static_cast<unsigned int>(roundf(currentHeading)) % 360);
     display.drawString(String(number) + "\xC2\xB0 " + headingCardinal(currentHeading), cx, 112, 2);
+    if (!headingAvailable) {
+      display.setTextColor(COLOR_MUTED);
+      display.drawString("ULTIMO RUMO", cx, 128, 1);
+    }
   } else {
-    // Do not leave old cardinal letters suggesting a currently valid course.
+    // No direction is assumed before the first valid GPS course.
     display.setTextColor(COLOR_MUTED);
     display.drawString("--", cx, 112, 2);
   }
@@ -248,6 +255,12 @@ void drawBackground() {
   display.fillScreen(COLOR_BACKGROUND);
 }
 
+int8_t speedBand(float kmh) {
+  if (kmh > Layout::YELLOW_LIMIT) return 2;
+  if (kmh > Layout::GREEN_LIMIT) return 1;
+  return 0;
+}
+
 void drawSpeedPanel() {
   using namespace Layout;
   const int16_t width = display.width();
@@ -276,9 +289,13 @@ void drawSpeedPanel() {
                    COLOR_BLACK);
   const int16_t mark50 = scaleX + static_cast<int16_t>(scaleWidth * float(GREEN_LIMIT) / SCALE_MAX);
   const int16_t mark100 = scaleX + static_cast<int16_t>(scaleWidth * float(YELLOW_LIMIT) / SCALE_MAX);
-  display.fillRect(scaleX, barY, mark50 - scaleX, barHeight, COLOR_AMBER);
-  display.fillRect(mark50, barY, mark100 - mark50, barHeight, COLOR_SPEED_MIDDLE);
-  display.fillRect(mark100, barY, scaleX + scaleWidth - mark100, barHeight, COLOR_SPEED_HIGH);
+  const int8_t activeBand = speedAvailable ? speedBand(currentSpeedKmh) : -1;
+  display.fillRect(scaleX, barY, mark50 - scaleX, barHeight,
+                   activeBand == 0 ? COLOR_AMBER : COLOR_SPEED_HIGH);
+  display.fillRect(mark50, barY, mark100 - mark50, barHeight,
+                   activeBand == 1 ? COLOR_AMBER : COLOR_SPEED_HIGH);
+  display.fillRect(mark100, barY, scaleX + scaleWidth - mark100, barHeight,
+                   activeBand == 2 ? COLOR_AMBER : COLOR_SPEED_HIGH);
 
   for (const uint16_t value : GRADUATIONS) {
     const int16_t x = scaleX + static_cast<int16_t>(scaleWidth * float(value) / SCALE_MAX);
@@ -293,7 +310,15 @@ void drawSpeedPanel() {
   if (speedAvailable) {
     const float boundedSpeed = constrain(currentSpeedKmh, 0.0f, float(SCALE_MAX));
     const int16_t markerX = scaleX + static_cast<int16_t>(scaleWidth * boundedSpeed / SCALE_MAX);
-    display.drawFastVLine(markerX, barY - 8, barHeight + 16, COLOR_TEXT);
+    const int16_t markerTop = barY - MARKER_TOP_OFFSET;
+    display.fillRect(markerX - MARKER_WIDTH / 2, markerTop, MARKER_WIDTH,
+                     barHeight + MARKER_TOP_OFFSET + 4, COLOR_TEXT);
+    // Downward tip touches the top of the 2px marker, all within the black panel.
+    display.fillTriangle(markerX - MARKER_TRIANGLE_HALF_WIDTH,
+                         markerTop - MARKER_TRIANGLE_HEIGHT,
+                         markerX + MARKER_TRIANGLE_HALF_WIDTH,
+                         markerTop - MARKER_TRIANGLE_HEIGHT,
+                         markerX, markerTop, COLOR_TEXT);
   }
 }
 
@@ -324,14 +349,12 @@ void drawOrientationCheck(bool rotationTest) {
 
 void drawIdleScreen() {
   drawBackground();
-  display.setTextDatum(TC_DATUM);
-  display.setTextColor(COLOR_AMBER);
-  display.drawString("BEELINE", navigationWidth() / 2, 25, 4);
+  display.setTextDatum(MC_DATUM);
   display.setTextColor(COLOR_MUTED);
-  display.drawCentreString("Aguardando instrucoes", navigationWidth() / 2, 81, 2);
+  display.drawString("Aguardando instrucoes", navigationWidth() / 2, Layout::PANEL_TOP / 2 - 16, 2);
   display.setTextColor(COLOR_TEXT);
-  display.drawCentreString("Conecte pelo app Android", navigationWidth() / 2, 157,
-                           navigationWidth() < 220 ? 1 : 2);
+  display.drawString("Conecte pelo app Android", navigationWidth() / 2, Layout::PANEL_TOP / 2 + 16,
+                     navigationWidth() < 220 ? 1 : 2);
   drawSidePanel();
   drawSpeedPanel();
 }
@@ -605,7 +628,8 @@ void processPendingCommands() {
         static_cast<uint32_t>(now - speed.receivedAtMs) < SPEED_TIMEOUT_MS;
     if (speedAvailable != available ||
         (available && (roundf(currentSpeedKmh) != roundf(speed.kmh) ||
-                       speedMarker(currentSpeedKmh) != speedMarker(speed.kmh)))) {
+                       speedMarker(currentSpeedKmh) != speedMarker(speed.kmh) ||
+                       speedBand(currentSpeedKmh) != speedBand(speed.kmh)))) {
       speedPanelDirty = true;
     }
     currentSpeedKmh = available ? speed.kmh : 0.0f;
@@ -619,7 +643,10 @@ void processPendingCommands() {
         static_cast<uint32_t>(millis() - heading.receivedAtMs) < HEADING_TIMEOUT_MS;
     if (headingAvailable != available || (available && currentHeading != heading.degrees)) sidePanelDirty = true;
     headingAvailable = available;
-    currentHeading = available ? heading.degrees : 0;
+    if (available) {
+      currentHeading = heading.degrees;
+      headingRemembered = true;
+    }
     lastHeadingUpdateMs = heading.receivedAtMs;
   }
   if (takeRoute) {
@@ -706,7 +733,6 @@ void loop() {
   }
   if (headingAvailable && static_cast<uint32_t>(now - lastHeadingUpdateMs) >= HEADING_TIMEOUT_MS) {
     headingAvailable = false;
-    currentHeading = 0;
     sidePanelDirty = true;
   }
   if (routeAvailable && static_cast<uint32_t>(now - lastRouteUpdateMs) >= routeValidityMs) {
