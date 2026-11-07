@@ -30,6 +30,7 @@ function turnIcon(maneuver: Turn['maneuver']) {
     slight_right: 'arrow-top-right',
     right: 'arrow-right',
     uturn: 'keyboard-return',
+    text: 'text-box-outline',
   };
   return icons[maneuver];
 }
@@ -91,7 +92,7 @@ export default function HomeScreen() {
       if (key === lastNotificationRef.current) return;
       lastNotificationRef.current = key;
       const parsed = parseMapsInstruction(notification);
-      setCapturedNotificationText(parsed ? '' : getMapsNotificationText(notification));
+      setCapturedNotificationText(getMapsNotificationText(notification));
       setMapsReadState(parsed ? 'ready' : 'unsupported');
       setLiveTurn(parsed);
       setNotificationStatus(parsed
@@ -135,7 +136,7 @@ export default function HomeScreen() {
     const key = `${liveTurn.maneuver}:${liveTurn.distanceMeters}:${liveTurn.road}`;
     if (sentInstructionRef.current === key) return;
     sentInstructionRef.current = key;
-    BeeLineAndroid.writeCommand(makeNavigationCommand(liveTurn))
+    Promise.resolve().then(() => BeeLineAndroid.writeCommand(makeNavigationCommand(liveTurn)))
       .then(() => setNotificationStatus('Instrução do Maps enviada ao ESP32.'))
       .catch((error: unknown) => {
         sentInstructionRef.current = '';
@@ -413,15 +414,20 @@ export default function HomeScreen() {
                   <MaterialCommunityIcons name={turnIcon(liveTurn.maneuver)} size={40} color={colors.primary} />
                   <Text style={[styles.turnLabel, { color: colors.card }]}>{liveTurn.label}</Text>
                 </View>
-                <View style={styles.distanceBlock}>
+                {liveTurn.maneuver !== 'text' && <View style={styles.distanceBlock}>
                   <Text style={[styles.distance, { color: colors.card }]}>{liveTurn.distanceMeters || '—'}</Text>
                   <Text style={[styles.distanceUnit, { color: colors.mutedForeground }]}>METROS</Text>
-                </View>
+                </View>}
               </View>
               <View style={[styles.roadRow, { borderTopColor: 'rgba(255,255,255,0.14)' }]}>
-                <Feather name="corner-up-right" size={15} color={colors.primary} />
+                <Feather name={liveTurn.maneuver === 'text' ? 'info' : 'corner-up-right'} size={15} color={colors.primary} />
                 <Text style={[styles.roadText, { color: colors.card }]}>{liveTurn.road || 'Via não informada'}</Text>
               </View>
+              {liveTurn.maneuver === 'text' && (
+                <Text style={[styles.emptyHint, { color: colors.mutedForeground }]}>
+                  O Maps informou uma orientação textual, sem manobra identificada.
+                </Text>
+              )}
             </>
           ) : (
             <View style={styles.emptyInstruction}>
@@ -456,12 +462,12 @@ export default function HomeScreen() {
         <Text style={[styles.demoNote, { color: colors.mutedForeground }]}>
           {notificationStatus}{!liveTurn ? ' Use “Enviar instrução de teste” para verificar a placa sem uma rota.' : ''}
         </Text>
-        {notificationNotParsed && (
+        {!!capturedNotificationText && (
           <Pressable
             accessibilityRole="button"
             onPress={() => Alert.alert(
               'Texto recebido do Maps',
-              `${capturedNotificationText.slice(0, 1200) || 'A notificação não contém texto nos campos acessíveis.'}\n\nEste texto é exibido somente neste celular. Pode conter nomes de vias ou destinos; o app não o envia a um servidor.`,
+              `${capturedNotificationText.slice(0, 1200) || 'A notificação não contém texto nos campos acessíveis.'}\n\nPode conter nomes de vias ou destinos. As orientações são transmitidas por Bluetooth à sua ESP32; o app não envia esse conteúdo a um servidor.`,
             )}
           >
             <Text style={[styles.notificationDetails, { color: colors.primary }]}>Ver texto recebido do Maps</Text>

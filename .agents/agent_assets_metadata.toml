@@ -19,28 +19,28 @@ content_type = "image/png"
 id = "X6d5liqvopeFMUbBSZr5-"
 uri = "file://generated-artifacts/beeline-apk.zip"
 type = "unspecified"
-title = "Projeto independente para gerar APK BeeLine"
-description = "ZIP pronto para abrir como projeto Expo/EAS e iniciar a build do APK; contém o código e configuração Android, não é o arquivo .apk instalável."
+title = "Projeto Android atualizado para gerar o APK"
+description = "Código-fonte independente, não um APK compilado. Inclui o reconhecimento de “em direção a…” e exige o firmware atualizado."
 logical_id = "af290ce3-4f7d-4d9a-9714-32ad72ca0cdf"
-content_hash = "sha256:d84b83ea8eef83ed79c20f30f93999ade4ad5497d8cf5aa30fb0b381a9ae0de7"
-size = 1135344
-mtime_ms = 1793794470944
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/48c64e5b-6f41-4cca-a323-7eabd6b728e4"
-storage_version_token = "1793794502953910"
+content_hash = "sha256:a03437201c8692d8f7ccfedcab861e1c115093ccf3b5bff2d4776cd92e04e889"
+size = 1136283
+mtime_ms = 1794060899059
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/f31d4575-a925-41ab-952f-1beca9639f87"
+storage_version_token = "1794060951582691"
 content_type = "application/octet-stream"
 
 [[outputs]]
 id = "pxa-ZW_NUGSwaTXNdmCqZ"
 uri = "file://generated-artifacts/beeline-firmware.zip"
 type = "unspecified"
-title = "Baixar firmware atualizado — BeeLine ESP32"
-description = "ZIP com os ícones da fonte TTF. Extraia inteiro e mantenha navigation-font.h na mesma pasta do arquivo .ino."
+title = "Firmware atualizado — orientação textual"
+description = "Extrair inteiro e manter o .ino e navigation-font.h juntos. Mostra orientações sem manobra identificada e preserva as seis setas existentes."
 logical_id = "4d874922-3a75-4be6-aedf-726c4109f74b"
-content_hash = "sha256:b5c0a107f0cdc04e7aa96061ebb53eba3f9f5abf031018a4cfb23be07c786c89"
-size = 21167
-mtime_ms = 1793839397665
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/d07dde53-8c34-4a00-9cad-3ddef313bc42"
-storage_version_token = "1793985433969588"
+content_hash = "sha256:89fcee70bd9faed6b496cd14f1c1ec079ed9f80c3bca73fb404f851a535521c0"
+size = 22161
+mtime_ms = 1794060899339
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/89b55965-bb16-4c28-a5f7-5ce5d3e81e58"
+storage_version_token = "1794060950889678"
 content_type = "application/octet-stream"
 
 [[outputs]]

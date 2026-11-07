@@ -1,3 +1,16 @@
+# Atualização: orientação textual do Maps
+
+Este pacote inclui o reconhecimento de frases como **“em direção a R. Exemplo”**
+mesmo sem indicação de curva. O BeeLine mostra e envia o texto sem inventar uma
+seta e sem usar a distância total da rota como distância até a próxima manobra.
+Instale também o firmware atualizado, com suporte a `maneuver: "text"`.
+Velocidade, rumo GPS e distância restante continuam independentes.
+
+O arquivo ZIP é um **projeto-fonte para gerar o APK**, não um APK compilado.
+Use os passos de compilação deste documento. Depois de instalar as duas
+atualizações, confira a orientação com uma rota iniciada e o BeeLine aberto;
+essa mudança não adiciona um novo serviço nativo de manobras em segundo plano.
+
 # BeeLine Navigator — projeto Android independente
 
 Este ZIP contém código-fonte, **não um APK compilado**. Depois de extrair, a pasta do

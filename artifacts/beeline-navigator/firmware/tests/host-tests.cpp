@@ -278,6 +278,43 @@ int main() {
   }
   display.rotation = activeDisplayRotation;
   std::cout << "PASS: six mapped TTF masks, flash budget, bounds and neutral unknown\n";
+  // This is the contextual command emitted by the Android parser (no turn distance).
+  const int drawsBeforeText = display.fullDraws;
+  const auto iconsBeforeText = display.bitmaps.size();
+  display.textSamples.clear();
+  write(R"({"type":"navigation","maneuver":"text","road":"em direcao a R. Exemplo","timestamp":42})");
+  tick();
+  assert(display.fullDraws == drawsBeforeText + 1); // Erases the previous arrow.
+  assert(currentInstruction.maneuver == "text" && hasNavigationInstruction);
+  assert(display.bitmaps.size() == iconsBeforeText);
+  bool sawGuidance = false;
+  for (const auto& sample : display.textSamples) {
+    if (sample.x < navigationWidth() && sample.y < Layout::PANEL_TOP) {
+      assert(sample.value != "0 m" && sample.value != "4300 m" && sample.value != "?");
+      if (sample.value == "em direcao a R. Exemplo") sawGuidance = true;
+      if (sample.y >= 47 && sample.y <= 125)
+        assert(display.textWidth(String(sample.value), sample.font) <= navigationWidth() - 16);
+    }
+  }
+  assert(sawGuidance);
+  const int textDraws = display.fullDraws;
+  write(R"({"type":"navigation","maneuver":"text","road":"em direcao a R. Exemplo","timestamp":43})");
+  tick();
+  assert(display.fullDraws == textDraws);
+  reject(R"({"type":"navigation","maneuver":"text","road":""})");
+  display.textSamples.clear();
+  drawTextGuidance(String(std::string(170, 'A')));
+  for (const auto& sample : display.textSamples) {
+    if (sample.y < 165) {
+      assert(display.textWidth(String(sample.value), sample.font) <= navigationWidth() - 16);
+      assert(sample.y < Layout::PANEL_TOP);
+    }
+  }
+  write(R"({"type":"navigation","maneuver":"right","distanceMeters":200,"road":"Rua Exemplo"})");
+  tick();
+  assert(display.bitmaps.size() == iconsBeforeText + 1);
+  assert(display.bitmaps.back().data == NavigationFont::kMasks[maneuverIconIndex("right")]);
+  std::cout << "PASS: contextual text replaces arrow, wraps, omits fake distance and restores maneuvers\n";
   NimBLEConnInfo info;
   NimBLEServer* server = NimBLEDevice::createServer();
   const int advertising = NimBLEDevice::getAdvertising()->starts;

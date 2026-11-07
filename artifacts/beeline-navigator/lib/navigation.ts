@@ -1,9 +1,9 @@
 import type { MapsNotification } from '../modules/beeline-android';
 
 export type Turn = {
-  maneuver: 'straight' | 'slight_left' | 'left' | 'slight_right' | 'right' | 'uturn';
+  maneuver: 'straight' | 'slight_left' | 'left' | 'slight_right' | 'right' | 'uturn' | 'text';
   label: string;
-  distanceMeters: number;
+  distanceMeters: number | null;
   road: string;
 };
 
@@ -14,6 +14,7 @@ const maneuverLabels: Record<Turn['maneuver'], string> = {
   slight_right: 'Mantenha-se à direita',
   right: 'Vire à direita',
   uturn: 'Faça o retorno',
+  text: 'Orientação do Maps',
 };
 
 function normalized(value: string): string {
@@ -35,7 +36,16 @@ export function parseMapsInstruction(notification: MapsNotification): Turn | nul
   const source = getMapsNotificationText(notification);
   if (!source) return null;
 
-  const text = normalized(source);
+  // A destination/street name is not a turn. Keep this contextual instruction
+  // separate from maneuver matching (e.g. "em direção a Rua Direita").
+  const parts = source.split(/[·\n\r]+/).map(part => part.trim()).filter(Boolean);
+  const isContext = (part: string) =>
+    /^(?:\d+(?:[.,]\d+)?\s*(?:m|km)\s*[,–-]?\s*)?em direcao (?:a|ao|aos|as)\s+\S/.test(normalized(part));
+  const context = parts.find(isContext)
+    ?.replace(/^\d+(?:[.,]\d+)?\s*(?:m|km)\s*[,–-]?\s*/i, '')
+    ?.replace(/\s+\d+\s*(?:min(?:utos?)?|h(?:oras?)?)\b.*$/i, '')
+    .replace(/\s+chegada\b.*$/i, '').trim();
+  const text = normalized(parts.filter(part => !isContext(part)).join(' · '));
   let maneuver: Turn['maneuver'] | null = null;
   if (/\b(retorno|retorne|retornar|faca meia-volta|faca o retorno|u-turn|make a u-turn)\b/.test(text)) {
     maneuver = 'uturn';
@@ -50,7 +60,15 @@ export function parseMapsInstruction(notification: MapsNotification): Turn | nul
   } else if (/\b(siga em frente|continue|straight|head (?:north|south)(?:east|west)?|head east|head west|siga (?:na direcao|em direcao|em direcao ao|em direcao a) (?:norte|sul|leste|oeste|nordeste|noroeste|sudeste|sudoeste))\b/.test(text)) {
     maneuver = 'straight';
   }
-  if (!maneuver) return null;
+  if (!maneuver) {
+    if (!context) return null;
+    return {
+      maneuver: 'text',
+      label: maneuverLabels.text,
+      distanceMeters: null,
+      road: context,
+    };
+  }
 
   const distanceMatch = text.match(/\b(\d+(?:[.,]\d+)?)\s*(km|quil[oô]metros?|m|metros?)\b/i);
   const distanceValue = distanceMatch ? Number(distanceMatch[1].replace(',', '.')) : 0;
@@ -66,18 +84,32 @@ export function parseMapsInstruction(notification: MapsNotification): Turn | nul
 }
 
 export function makeNavigationCommand(turn: Turn, timestamp = Date.now()): string {
-  const command = JSON.stringify({
+  const payload = {
     type: 'navigation',
     maneuver: turn.maneuver,
-    distanceMeters: turn.distanceMeters,
-    road: turn.road,
+    // A textual heading has no known distance to the next maneuver.
+    distanceMeters: turn.maneuver === 'text' ? undefined : turn.distanceMeters,
+    // Built-in TFT fonts: send ASCII for this wrapped textual mode only.
+    road: turn.maneuver === 'text'
+      ? turn.road.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^\x20-\x7e]/g, ' ').replace(/\s+/g, ' ').trim()
+      : turn.road,
     timestamp,
-  });
-  const utf8Bytes = Array.from(command).reduce((total, character) => {
+  };
+  const byteLength = (value: string) => Array.from(value).reduce((total, character) => {
     const codePoint = character.codePointAt(0) ?? 0;
     return total + (codePoint <= 0x7f ? 1 : codePoint <= 0x7ff ? 2 : codePoint <= 0xffff ? 3 : 4);
   }, 0);
-  if (utf8Bytes > 180) {
+  let command = JSON.stringify(payload);
+  if (turn.maneuver === 'text' && byteLength(command) > 180) {
+    const characters = Array.from(payload.road);
+    do {
+      characters.pop();
+      payload.road = characters.join('').trimEnd() + '...';
+      command = JSON.stringify(payload);
+    } while (characters.length > 0 && byteLength(command) > 180);
+  }
+  if (byteLength(command) > 180) {
     throw new Error('A instrução não cabe no limite de 180 bytes do firmware.');
   }
   return command;

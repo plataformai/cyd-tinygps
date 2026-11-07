@@ -104,7 +104,33 @@ O texto do rumo usa oito direções em inglês (N, NE, E, SE, S, SW, W, NW), par
 
 Para compilar localmente, baixe `beeline-firmware.zip`, extraia os arquivos e abra `beeline-esp32/beeline-esp32.ino` no Arduino IDE. Agora **não basta copiar somente o `.ino`**: mantenha `navigation-font.h` junto dele. O ZIP já contém ambos, a licença e este README. Não é necessária outra biblioteca Arduino além de **NimBLE-Arduino 2.x, ArduinoJson 7.x e TFT_eSPI** já usadas pelo firmware. Configure o `User_Setup.h` do display como antes e compile/grave normalmente.
 
-### Ícones da fonte TTF
+### Orientação textual sem manobra
+
+O APK também reconhece orientações contextuais como `em direção a R. Exemplo`.
+Quando não há uma manobra explícita, envia `maneuver: "text"` e a frase em `road`,
+**sem `distanceMeters`**. O firmware apaga a indicação anterior, mostra o texto
+em até quatro linhas e a legenda `Sem manobra informada`. Não desenha seta,
+interrogação nem `0 m` nesse modo. Frases longas recebem reticências.
+
+Exemplo: `{"type":"navigation","maneuver":"text","road":"em direcao a R. Exemplo","timestamp":42}`.
+
+As distâncias e horários do resumo (`13 min`, `4,3 km`, `chegada 11:20`) não entram
+na orientação textual. A distância restante continua chegando pelo pacote
+`type: "route"` e permanece no painel lateral. As seis manobras direcionais
+continuam usando o protocolo e os glifos anteriores.
+
+**Esta correção exige os novos APK e firmware juntos.** Compilar apenas o novo
+firmware não muda o reconhecimento de notificações do APK instalado. O ZIP do
+APK contém o projeto-fonte para build, não um APK já compilado.
+
+O tratamento não interpreta ícones presentes só na notificação do Maps nem
+passa a reconhecer qualquer mensagem arbitrária. A leitura/envio de manobras
+continua usando o mecanismo atual do aplicativo; esta mudança não cria um
+serviço nativo de navegação em segundo plano. Mensagens textuais são enviadas
+sem acentos ao TFT para compatibilidade com as fontes embutidas; no celular,
+o texto mantém seus acentos. O comando completo continua limitado a 180 bytes.
+
+### Origem dos ícones TTF
 
 O usuário escolheu manter o TTF `gps-signs`. Seu `selection.json` identifica **35 ícones completos / 46 códigos Unicode privados**; alguns sinais são composições de duas ou três camadas, não manobras adicionais.
 
@@ -123,7 +149,10 @@ A placa desenha máscaras monocromáticas de 96×96 bits diretamente da flash, n
 
 `nav_invalid` não significa fallback seguro: seu desenho é uma seta reta. Por isso o firmware não usa esse glifo para comandos desconhecidos. O retorno é um símbolo genérico; não acrescenta informação de sentido horário/anti-horário ao protocolo.
 
-Esta é uma troca visual para as seis manobras existentes: **não exige novo APK**, nem amplia o reconhecimento das notificações do Maps. Não ativa os demais ícones ou as 66 manobras do planejamento de mensageria.
+A troca visual dos seis ícones, isoladamente, não exigia novo APK nem ampliava
+o reconhecimento das notificações. Já o modo textual descrito acima exige
+atualizar o APK e o firmware. Os demais ícones e as 66 manobras do planejamento
+de mensageria não são ativados automaticamente.
 
 No repositório, `font-source/` preserva TTF e selection originais. `scripts/generate-beeline-font.py` verifica a cobertura dos códigos e os limites geométricos dos contornos contra o TTF, gera `navigation-font.h` e `docs/firmware-font-codes.csv`. `--check` confere os derivados; `--preview` gera pranchas. As dependências Python em `scripts/beeline-font-requirements.txt` são apenas para regeneração, não para compilar no Arduino IDE.
 

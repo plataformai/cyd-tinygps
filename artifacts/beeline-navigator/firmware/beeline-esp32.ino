@@ -336,10 +336,49 @@ void drawIdleScreen() {
   drawSpeedPanel();
 }
 
+void drawTextGuidance(const String& text) {
+  const int16_t maxWidth = navigationWidth() - 16;
+  const uint16_t length = text.length();
+  uint16_t offset = 0;
+  display.setTextDatum(TC_DATUM);
+  display.setTextColor(COLOR_TEXT);
+  for (uint8_t line = 0; line < 4 && offset < length; ++line) {
+    uint16_t end = offset;
+    uint16_t lastSpace = offset;
+    while (end < length &&
+           display.textWidth(text.substring(offset, end + 1), 2) <= maxWidth) {
+      if (text.c_str()[end] == ' ') lastSpace = end;
+      ++end;
+    }
+    if (end == offset) ++end; // Always advance, even on diagnostic portrait rotations.
+    if (end < length && lastSpace > offset) end = lastSpace;
+    String fragment = text.substring(offset, end);
+    if (line == 3 && end < length) {
+      while (fragment.length() > 0 &&
+             display.textWidth(fragment + "...", 2) > maxWidth) {
+        fragment = fragment.substring(0, fragment.length() - 1);
+      }
+      fragment += "...";
+    }
+    display.drawString(fragment, navigationWidth() / 2, 47 + line * 26, 2);
+    offset = end;
+    while (offset < length && text.c_str()[offset] == ' ') ++offset;
+  }
+  display.setTextColor(COLOR_MUTED);
+  display.drawString("Sem manobra informada", navigationWidth() / 2, 165, 2);
+}
+
 void renderInstruction(const NavigationInstruction& instruction) {
   drawBackground();
   display.setTextDatum(TC_DATUM);
   display.setTextColor(COLOR_MUTED);
+  if (instruction.maneuver == "text") {
+    display.drawString("ORIENTACAO DO MAPS", navigationWidth() / 2, Layout::DIRECTION_Y, 2);
+    drawTextGuidance(instruction.road);
+    drawSidePanel();
+    drawSpeedPanel();
+    return;
+  }
   display.drawString("PROXIMA DIRECAO", navigationWidth() / 2, Layout::DIRECTION_Y, 2);
   drawManeuverIcon(instruction.maneuver);
 
@@ -497,6 +536,7 @@ class CommandCallbacks final : public NimBLECharacteristicCallbacks {
     if ((!object["road"].isUnbound() && !object["road"].is<const char*>()) ||
         (!object["distanceMeters"].isUnbound() && !object["distanceMeters"].is<int64_t>())) return;
     const char* road = object["road"] | "";
+    if (strcmp(maneuver, "text") == 0 && strlen(road) == 0) return;
     if (strlen(road) > MAX_COMMAND_BYTES || strlen(maneuver) > MAX_COMMAND_BYTES ||
         (!object["road"].isUnbound() && object["road"].as<JsonString>().size() != strlen(road))) return;
     const int64_t distance = object["distanceMeters"] | int64_t(0);
@@ -545,9 +585,11 @@ void processPendingCommands() {
   // At most one navigation and one speed per loop, irrespective of burst size.
   if (takeNavigation) {
     if (!hasNavigationInstruction ||
-        maneuverIconIndex(currentInstruction.maneuver) != maneuverIconIndex(navigation.maneuver) ||
+        currentInstruction.maneuver != String(navigation.maneuver) ||
         currentInstruction.distanceMeters != navigation.distanceMeters ||
-        visibleRoad(currentInstruction.road) != visibleRoad(String(navigation.road))) {
+        (String(navigation.maneuver) == "text"
+          ? currentInstruction.road != String(navigation.road)
+          : visibleRoad(currentInstruction.road) != visibleRoad(String(navigation.road)))) {
       screenDirty = true;
     }
     currentInstruction = {String(navigation.maneuver), String(navigation.road), navigation.distanceMeters};

@@ -67,3 +67,49 @@ test('keeps the firmware navigation JSON contract and byte limit', () => {
   });
   assert.ok(Buffer.byteLength(command, 'utf8') <= 180);
 });
+
+test('forwards contextual guidance without inventing a turn or maneuver distance', () => {
+  for (const fields of [
+    { text: 'em direcao a R. Exemplo\n13min 4,3 km chegada 11:20' },
+    { title: '0 m', text: 'em direção a R. Exemplo', subText: '13 min · 4,3 km · Chegada 11:20' },
+    { bigText: 'em direção a R. Exemplo 13min 4,3 km chegada 11:20' },
+    { textLines: '0 m em direção a R. Exemplo\n13min 4,3 km chegada 11:20' },
+  ]) {
+    const turn = parseMapsInstruction(notification(fields));
+    assert.equal(turn?.maneuver, 'text');
+    assert.equal(turn?.distanceMeters, null);
+    assert.match(turn?.road ?? '', /^em dire[cç][aã]o a R\. Exemplo$/);
+    const wire = JSON.parse(makeNavigationCommand(turn, 42));
+    assert.equal(wire.maneuver, 'text');
+    assert.equal(wire.road, 'em direcao a R. Exemplo');
+    assert.ok(!Object.hasOwn(wire, 'distanceMeters'));
+    assert.ok(!JSON.stringify(wire).includes('4,3'));
+  }
+});
+
+test('street names do not generate arrows; explicit maneuvers still take precedence', () => {
+  assert.equal(parseMapsInstruction(notification({ text: 'em direção a Rua Direita' }))?.maneuver, 'text');
+  assert.equal(parseMapsInstruction(notification({
+    title: 'Vire à esquerda em 200 m',
+    text: 'em direção a Rua Direita',
+  }))?.maneuver, 'left');
+  for (const [text, maneuver] of [
+    ['Siga em frente', 'straight'], ['Mantenha-se à esquerda', 'slight_left'],
+    ['Vire à esquerda', 'left'], ['Mantenha-se à direita', 'slight_right'],
+    ['Vire à direita', 'right'], ['Faça o retorno', 'uturn'],
+  ]) {
+    assert.equal(parseMapsInstruction(notification({ text }))?.maneuver, maneuver);
+  }
+});
+
+test('text guidance respects BLE bytes, handles accents and truncates with an ellipsis', () => {
+  const turn = parseMapsInstruction(notification({
+    text: 'em direção a Avenida ' + 'São João "Teste" '.repeat(30),
+  }));
+  const command = makeNavigationCommand(turn, 1761600000000);
+  assert.ok(Buffer.byteLength(command) <= 180);
+  assert.match(JSON.parse(command).road, /Sao Joao/);
+  assert.match(JSON.parse(command).road, /\.\.\.$/);
+  assert.equal(parseMapsInstruction(notification({ text: 'em direção a' })), null);
+  assert.equal(parseMapsInstruction(notification({ text: '13min 4,3 km chegada 11:20' })), null);
+});

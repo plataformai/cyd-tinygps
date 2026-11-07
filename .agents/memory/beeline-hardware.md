@@ -31,3 +31,14 @@ O usuário confirmou que a conexão pelo app voltou a funcionar após ajustar as
 
 **How to apply:** Se a placa aparece e conecta pelo nRF Connect, mas o BeeLine não a encontra, verificar primeiro as permissões do app no Android antes de gerar outro APK ou firmware.
 
+## Ícones TTF na placa
+
+O usuário confirmou que o comando de teste exibe corretamente a flecha da fonte,
+a distância e a via na placa após a implantação do TTF.
+
+**Why:** Confirmação física do usuário, não inferência dos testes simulados.
+
+**How to apply:** Distinguir falha de reconhecimento da notificação real de falha
+de renderização; o teste confirma esse caminho de desenho/envio, não a
+interpretação de todas as mensagens do Maps.
+
