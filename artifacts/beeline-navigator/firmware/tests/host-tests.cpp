@@ -57,6 +57,11 @@ int main() {
   assert(isThemeButtonHit(297, 212));
   assert(!isThemeButtonHit(278, 212));
   assert(!isThemeButtonHit(297, 194));
+  assert(Layout::SCALE_X == 68);
+  assert(Layout::SCALE_X - (Layout::SPEED_VALUE_X + Layout::SPEED_VALUE_MAX_WIDTH) ==
+         Layout::SPEED_TO_SCALE_GAP);
+  assert(Layout::SCALE_BUTTON_CLEARANCE - 2 * Layout::THEME_ICON_EDGE ==
+         Layout::SPEED_TO_SCALE_GAP);
   setup();
   assert(touchControllerReady && touchCalibrationActive);
   acceptTouchCalibrationPoint(TS_Point{100, 100, 700});
@@ -149,8 +154,30 @@ int main() {
   assert(COLOR_SPEED_MIDDLE == 0xB4A4); // Intermediate yellows are unchanged.
   pollTouchInput(); // A held press must not toggle repeatedly.
   assert(dayMode);
+  const size_t dayRectStart = display.rectangles.size();
+  display.textSamples.clear();
   drawCurrentScreen();
   assert(display.lastFillScreenColor == COLOR_DAY_BACKGROUND);
+  std::vector<uint16_t> dayBands;
+  for (auto it = display.rectangles.begin() + dayRectStart; it != display.rectangles.end(); ++it) {
+    if (it->y == Layout::BAR_Y && it->height == Layout::BAR_HEIGHT) dayBands.push_back(it->color);
+  }
+  assert(dayBands.size() == 3);
+  assert(dayBands[0] == COLOR_SPEED_HIGH && dayBands[1] == COLOR_AMBER &&
+         dayBands[2] == COLOR_SPEED_HIGH);
+  assert(std::none_of(display.textSamples.begin(), display.textSamples.end(),
+      [](const auto& sample) { return sample.value == "VELOCIDADE"; }));
+  assert(std::any_of(display.textSamples.begin(), display.textSamples.end(),
+      [](const auto& sample) {
+        return sample.value == "72" && sample.x == Layout::SPEED_VALUE_X &&
+               sample.y == Layout::SPEED_VALUE_Y && sample.font == 4 &&
+               sample.color == COLOR_BLACK;
+      }));
+  assert(std::any_of(display.textSamples.begin(), display.textSamples.end(),
+      [](const auto& sample) {
+        return sample.value == "km/h" && sample.x == Layout::SPEED_UNIT_X &&
+               sample.y == Layout::SPEED_UNIT_Y;
+      }));
   touchController.pressed = false;
   fakeNow += TOUCH_POLL_INTERVAL_MS;
   pollTouchInput();
@@ -363,15 +390,17 @@ int main() {
   assert(!currentInstruction.distanceAvailable);
   assert(display.bitmaps.size() == iconsBeforeText);
   bool sawGuidance = false;
+  bool sawTextHeading = false;
   for (const auto& sample : display.textSamples) {
     if (sample.x < navigationWidth() && sample.y < Layout::PANEL_TOP) {
       assert(sample.value != "0 m" && sample.value != "4300 m" && sample.value != "?");
       if (sample.value == "em direcao a R. Exemplo") sawGuidance = true;
+      if (sample.value == "Orientacao do GMaps" && sample.font == 1) sawTextHeading = true;
       if (sample.y >= 47 && sample.y <= 125)
         assert(display.textWidth(String(sample.value), sample.font) <= navigationWidth() - 16);
     }
   }
-  assert(sawGuidance);
+  assert(sawGuidance && sawTextHeading);
   const int textDraws = display.fullDraws;
   write(R"({"type":"navigation","maneuver":"text","road":"em direcao a R. Exemplo","timestamp":43})");
   tick();

@@ -4,12 +4,15 @@ static void runVisualChecks() {
   drawIdleScreen();
   const TFT_eSPI::TextSample* waiting = nullptr;
   const TFT_eSPI::TextSample* connect = nullptr;
+  bool showsSpeedTitle = false;
   for (const auto& sample : display.textSamples) {
     assert(sample.value != "BEELINE");
+    if (sample.value == "VELOCIDADE") showsSpeedTitle = true;
     if (sample.value == "Aguardando instrucoes") waiting = &sample;
     if (sample.value == "Conecte pelo app Android") connect = &sample;
   }
   assert(waiting && connect && waiting->x == 120 && connect->x == 120);
+  assert(!showsSpeedTitle);
   assert(waiting->y + connect->y == 2 * (Layout::PANEL_TOP / 2));
   assert(connect->y - waiting->y == 32); // 16px text and one blank 16px line.
 
@@ -52,6 +55,23 @@ static void runVisualChecks() {
     if (rect.y == Layout::BAR_Y && rect.height == Layout::BAR_HEIGHT)
       assert(rect.color == COLOR_SPEED_HIGH);
   }
+  dayMode = true;
+  speedAvailable = true;
+  currentSpeedKmh = 75;
+  display.rectangles.clear();
+  display.triangles.clear();
+  drawSpeedPanel();
+  std::vector<uint16_t> dayBands;
+  for (const auto& rect : display.rectangles) {
+    if (rect.y == Layout::BAR_Y && rect.height == Layout::BAR_HEIGHT)
+      dayBands.push_back(rect.color);
+  }
+  assert(dayBands.size() == 3);
+  assert(dayBands[0] == COLOR_SPEED_HIGH && dayBands[1] == COLOR_AMBER &&
+         dayBands[2] == COLOR_SPEED_HIGH);
+  assert(display.rectangles.back().color == COLOR_BLACK);
+  dayMode = false;
+  speedAvailable = false;
   // Crossing a band boundary must repaint even when rounded speed/pixel is unchanged.
   for (float boundary : {50.0f, 100.0f}) {
     write(std::string("{\"type\":\"speed\",\"valid\":true,\"speedKmh\":") +

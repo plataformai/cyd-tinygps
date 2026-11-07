@@ -34,7 +34,7 @@ struct TFT_eSPI {
     trace("screen\t%d\n", color);
   }
   void fillRect(int x, int y, int width, int height, int color) {
-    touch(); if (x == 96 && y == 207) ++panelDraws;
+    touch(); if (x == 68 && y == 207) ++panelDraws;
     lastFillColor = static_cast<uint16_t>(color);
     rectangles.push_back({x, y, width, height, static_cast<uint16_t>(color)});
     trace("rect\t%d\t%d\t%d\t%d\t%d\n", x, y, width, height, color);
@@ -52,7 +52,9 @@ struct TFT_eSPI {
     trace("circle\t%d\t%d\t%d\t%d\n", x, y, radius, color);
   }
   void drawCircle(int, int, int, int) { touch(); }
-  void drawLine(int, int, int, int, int) { touch(); }
+  void drawLine(int x0, int y0, int x1, int y1, int color) {
+    touch(); trace("line\t%d\t%d\t%d\t%d\t%d\n", x0, y0, x1, y1, color);
+  }
   int textWidth(const String& value, int font) { touch(); return value.length() * (font == 1 ? 6 : 8); }
   void drawFastHLine(int x, int y, int width, int color) {
     touch(); horizontalLines.push_back({x, y, width, static_cast<uint16_t>(color)});

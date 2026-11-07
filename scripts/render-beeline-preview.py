@@ -53,6 +53,9 @@ def main():
         elif op == "triangle":
             x0, y0, x1, y1, x2, y2, color = map(int, parts)
             draw.polygon([(x0, y0), (x1, y1), (x2, y2)], fill=rgb565(color))
+        elif op == "line":
+            x0, y0, x1, y1, color = map(int, parts)
+            draw.line(((x0, y0), (x1, y1)), fill=rgb565(color))
         elif op in ("vline", "hline"):
             x, y, length, color = map(int, parts)
             end = (x, y + length - 1) if op == "vline" else (x + length - 1, y)

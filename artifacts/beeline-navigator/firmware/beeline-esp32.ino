@@ -51,18 +51,20 @@ static constexpr uint8_t SERIAL_BYTES_PER_LOOP = 16;
 namespace Layout {
 constexpr int16_t PANEL_TOP = 193;
 constexpr int16_t MARGIN = 12;
-constexpr int16_t SCALE_X = 96;
+constexpr int16_t SPEED_VALUE_X = 13, SPEED_VALUE_MAX_WIDTH = 45;
+constexpr int16_t SPEED_TO_SCALE_GAP = 10;
+constexpr int16_t SCALE_X = SPEED_VALUE_X + SPEED_VALUE_MAX_WIDTH + SPEED_TO_SCALE_GAP;
 constexpr int16_t BAR_Y = 207;
 constexpr int16_t BAR_HEIGHT = 10;
 constexpr int16_t SCALE_BUTTON_CLEARANCE = 32;
 constexpr int16_t MARKER_WIDTH = 2, MARKER_TOP_OFFSET = 8;
 constexpr int16_t MARKER_TRIANGLE_HALF_WIDTH = 4, MARKER_TRIANGLE_HEIGHT = 6;
 constexpr int16_t SCALE_BACKING_PADDING = 4;
-constexpr int16_t SPEED_LABEL_X = 13, SPEED_LABEL_Y = 196;
-constexpr int16_t SPEED_VALUE_Y = 204, SPEED_UNIT_X = 15, SPEED_UNIT_Y = 232;
+constexpr int16_t SPEED_VALUE_Y = 195, SPEED_UNIT_X = 15, SPEED_UNIT_Y = 225;
 constexpr int16_t SCALE_LABEL_Y = 222;
 constexpr int16_t THEME_BUTTON_CENTER_Y = BAR_Y + BAR_HEIGHT / 2;
 constexpr int16_t THEME_ICON_EDGE = 11, THEME_TOUCH_RADIUS = 17;
+constexpr int16_t FONT1_CHAR_WIDTH = 6;
 constexpr uint16_t SCALE_MAX = 140, GREEN_LIMIT = 50, YELLOW_LIMIT = 100;
 constexpr uint16_t GRADUATIONS[] = {0, 20, 40, 50, 60, 80, 100, 120, 140};
 constexpr int16_t ICON_CENTER_Y = 81;
@@ -495,15 +497,13 @@ void drawSpeedPanel() {
   display.fillRect(0, panelTop, width, display.height() - panelTop, panelBackgroundColor());
 
   display.setTextDatum(TL_DATUM);
-  display.setTextColor(COLOR_MUTED);
-  display.drawString("VELOCIDADE", SPEED_LABEL_X, SPEED_LABEL_Y, 1);
   display.setTextColor(speedAvailable ? mainTextColor() : COLOR_MUTED);
   display.drawString(speedAvailable ? String(static_cast<int>(roundf(currentSpeedKmh))) : "--",
-                     SPEED_LABEL_X, SPEED_VALUE_Y, 4);
+                     SPEED_VALUE_X, SPEED_VALUE_Y, 4);
   display.setTextColor(COLOR_MUTED);
   display.drawString("km/h", SPEED_UNIT_X, SPEED_UNIT_Y, 1);
 
-  // Leave a visible black border around the colored speed bands.
+  // Leave a visible panel-color border around the colored speed bands.
   display.fillRect(scaleX - SCALE_BACKING_PADDING,
                    barY - SCALE_BACKING_PADDING,
                    scaleWidth + 2 * SCALE_BACKING_PADDING,
@@ -513,11 +513,11 @@ void drawSpeedPanel() {
   const int16_t mark100 = scaleX + static_cast<int16_t>(scaleWidth * float(YELLOW_LIMIT) / SCALE_MAX);
   const int8_t activeBand = speedAvailable ? speedBand(currentSpeedKmh) : -1;
   display.fillRect(scaleX, barY, mark50 - scaleX, barHeight,
-                    activeBand == 0 ? highlightColor() : COLOR_SPEED_HIGH);
+                     activeBand == 0 ? COLOR_AMBER : COLOR_SPEED_HIGH);
   display.fillRect(mark50, barY, mark100 - mark50, barHeight,
-                    activeBand == 1 ? highlightColor() : COLOR_SPEED_HIGH);
+                     activeBand == 1 ? COLOR_AMBER : COLOR_SPEED_HIGH);
   display.fillRect(mark100, barY, scaleX + scaleWidth - mark100, barHeight,
-                    activeBand == 2 ? highlightColor() : COLOR_SPEED_HIGH);
+                     activeBand == 2 ? COLOR_AMBER : COLOR_SPEED_HIGH);
 
   for (const uint16_t value : GRADUATIONS) {
     const int16_t x = scaleX + static_cast<int16_t>(scaleWidth * float(value) / SCALE_MAX);
@@ -624,12 +624,32 @@ void drawTextGuidance(const String& text) {
                        Layout::TEXT_STATUS_Y, 2);
 }
 
+void drawMapsTextHeading() {
+  const String heading = "Orientacao do GMaps";
+  const int16_t centerX = navigationWidth() / 2;
+  const int16_t y = Layout::DIRECTION_Y;
+  display.setTextDatum(TC_DATUM);
+  display.setTextColor(COLOR_MUTED);
+  display.drawString(heading, centerX, y, 1);
+
+  // Font 1 is ASCII-only; add the cedilla and tilde with small strokes.
+  const int16_t left = centerX - display.textWidth(heading, 1) / 2;
+  const int16_t cedillaX = left + 7 * Layout::FONT1_CHAR_WIDTH + 2;
+  const int16_t tildeX = left + 8 * Layout::FONT1_CHAR_WIDTH + 1;
+  display.drawLine(cedillaX, y + 8, cedillaX + 1, y + 9, COLOR_MUTED);
+  display.drawLine(cedillaX + 1, y + 9, cedillaX, y + 10, COLOR_MUTED);
+  display.drawLine(tildeX, y - 1, tildeX + 1, y - 2, COLOR_MUTED);
+  display.drawLine(tildeX + 1, y - 2, tildeX + 2, y - 1, COLOR_MUTED);
+  display.drawLine(tildeX + 2, y - 1, tildeX + 3, y - 2, COLOR_MUTED);
+  display.drawLine(tildeX + 3, y - 2, tildeX + 4, y - 1, COLOR_MUTED);
+}
+
 void renderInstruction(const NavigationInstruction& instruction) {
   drawBackground();
   display.setTextDatum(TC_DATUM);
   display.setTextColor(COLOR_MUTED);
   if (instruction.maneuver == "text") {
-    display.drawString("ORIENTACAO DO MAPS", navigationWidth() / 2, Layout::DIRECTION_Y, 2);
+    drawMapsTextHeading();
     drawTextGuidance(instruction.road);
     if (instruction.distanceAvailable) {
       display.setTextDatum(MC_DATUM);
