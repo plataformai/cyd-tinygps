@@ -18,6 +18,7 @@ static void reject(const std::string& raw) {
   assert(!navigationPending && !speedPending);
   const String road = currentInstruction.road;
   const auto distance = currentInstruction.distanceMeters;
+  const bool distanceAvailable = currentInstruction.distanceAvailable;
   const float speed = currentSpeedKmh;
   const bool available = speedAvailable;
   const uint32_t timestamp = lastSpeedUpdateMs;
@@ -26,6 +27,7 @@ static void reject(const std::string& raw) {
   assert(!navigationPending && !speedPending);
   loop();
   assert(currentInstruction.road == road && currentInstruction.distanceMeters == distance);
+  assert(currentInstruction.distanceAvailable == distanceAvailable);
   assert(currentSpeedKmh == speed && speedAvailable == available && lastSpeedUpdateMs == timestamp);
   assert(display.calls == draws);
 }
@@ -39,7 +41,29 @@ int main() {
   static_assert(COLOR_AMBER > COLOR_SPEED_MIDDLE &&
                 COLOR_SPEED_MIDDLE > COLOR_SPEED_HIGH,
                 "Speed bands get progressively darker");
+  static_assert(COLOR_DAY_BACKGROUND == 0xFFFF && COLOR_DAY_AMBER < COLOR_AMBER,
+                "Day palette uses white and a darker yellow");
+  const float rawX[] = {100, 3900, 3900};
+  const float rawY[] = {100, 100, 3900};
+  const float screenX[] = {28, 292, 292};
+  const float screenY[] = {34, 34, 226};
+  TouchCalibration fitted;
+  assert(TouchCalibration::fromThreePoints(rawX, rawY, screenX, screenY, fitted));
+  int16_t mappedX, mappedY;
+  assert(fitted.map(100, 100, 320, 240, mappedX, mappedY));
+  assert(mappedX == 28 && mappedY == 34);
+  assert(fitted.map(4080, 4070, 320, 240, mappedX, mappedY));
+  assert(isThemeButtonHit(mappedX, mappedY));
+  assert(isThemeButtonHit(308, 234));
+  assert(!isThemeButtonHit(279, 234));
+  assert(!isThemeButtonHit(308, 213));
   setup();
+  assert(touchControllerReady && touchCalibrationActive);
+  acceptTouchCalibrationPoint(TS_Point{100, 100, 700});
+  acceptTouchCalibrationPoint(TS_Point{3900, 100, 700});
+  acceptTouchCalibrationPoint(TS_Point{3900, 3900, 700});
+  assert(!touchCalibrationActive && touchCalibration.isValid());
+  touchCalibration = fitted;
   assert(!headingRemembered && !headingAvailable);
   const auto* advertisingConfig = NimBLEDevice::getAdvertising();
   assert(advertisingConfig->scanResponseEnabled);
@@ -56,9 +80,11 @@ int main() {
   tick(1);
   assert(!orientationCheckActive && display.fullDraws == 2);
   assert(display.lastFillScreenColor == COLOR_BACKGROUND);
-  assert(display.horizontalLines.empty()); // No blue divider above the black band.
+  assert(std::none_of(display.horizontalLines.begin(), display.horizontalLines.end(),
+      [](const auto& line) { return line.y == Layout::PANEL_TOP; }));
   assert(display.roundRectCalls == 0); // No outline around the Android connection prompt.
   assert(currentInstruction.maneuver == "slight_right" && currentInstruction.distanceMeters == 350);
+  assert(currentInstruction.distanceAvailable);
   const std::vector<int> expected = {0, 20, 40, 50, 60, 80, 100, 120, 140};
   assert(display.graduations == expected);
   const int scaleWidth = display.width() - Layout::SCALE_X - Layout::MARGIN;
@@ -93,6 +119,40 @@ int main() {
                  sample.color == COLOR_AMBER;
         }));
   }
+
+  // The display's sun control toggles only on the lower-right touch target.
+  fakeNow = 5000;
+  lastTouchPollMs = 0;
+  touchControllerReady = true;
+  touchController.point = {4080, 4070, 700};
+  touchController.pressed = true;
+  touchWasDown = false;
+  dayMode = false;
+  pollTouchInput();
+  assert(dayMode && screenDirty);
+  assert(screenBackgroundColor() == COLOR_DAY_BACKGROUND);
+  assert(panelBackgroundColor() == COLOR_DAY_BACKGROUND);
+  assert(mainTextColor() == COLOR_BLACK);
+  assert(highlightColor() == COLOR_DAY_AMBER);
+  assert(COLOR_SPEED_MIDDLE == 0xB4A4); // Intermediate yellows are unchanged.
+  pollTouchInput(); // A held press must not toggle repeatedly.
+  assert(dayMode);
+  drawCurrentScreen();
+  assert(display.lastFillScreenColor == COLOR_DAY_BACKGROUND);
+  touchController.pressed = false;
+  fakeNow += TOUCH_POLL_INTERVAL_MS;
+  pollTouchInput();
+  assert(!touchWasDown);
+  touchController.pressed = true;
+  fakeNow += TOUCH_POLL_INTERVAL_MS;
+  pollTouchInput();
+  assert(!dayMode);
+  touchController.pressed = false;
+  fakeNow += TOUCH_POLL_INTERVAL_MS;
+  pollTouchInput();
+  assert(screenBackgroundColor() == COLOR_BACKGROUND);
+  screenDirty = speedPanelDirty = sidePanelDirty = false;
+  lastScreenUpdateMs = fakeNow;
 
   // Empty, oversized, malformed, wrong types, NULs, non-object and trailing input.
   for (const std::string& raw : std::vector<std::string>{
@@ -288,6 +348,7 @@ int main() {
   tick();
   assert(display.fullDraws == drawsBeforeText + 1); // Erases the previous arrow.
   assert(currentInstruction.maneuver == "text" && hasNavigationInstruction);
+  assert(!currentInstruction.distanceAvailable);
   assert(display.bitmaps.size() == iconsBeforeText);
   bool sawGuidance = false;
   for (const auto& sample : display.textSamples) {
@@ -304,6 +365,23 @@ int main() {
   tick();
   assert(display.fullDraws == textDraws);
   reject(R"({"type":"navigation","maneuver":"text","road":""})");
+  display.textSamples.clear();
+  write(R"({"type":"navigation","maneuver":"text","distanceMeters":250,"road":"em direcao a R. Exemplo","timestamp":44})");
+  tick();
+  assert(currentInstruction.distanceAvailable && currentInstruction.distanceMeters == 250);
+  bool sawTextDistance = false;
+  for (const auto& sample : display.textSamples) {
+    if (sample.value == "250 m" && sample.y == Layout::TEXT_DISTANCE_Y) sawTextDistance = true;
+  }
+  assert(sawTextDistance);
+  display.textSamples.clear();
+  write(R"({"type":"navigation","maneuver":"text","distanceMeters":0,"road":"em direcao a R. Exemplo","timestamp":45})");
+  tick();
+  bool sawZeroTextDistance = false;
+  for (const auto& sample : display.textSamples) {
+    if (sample.value == "0 m" && sample.y == Layout::TEXT_DISTANCE_Y) sawZeroTextDistance = true;
+  }
+  assert(sawZeroTextDistance);
   display.textSamples.clear();
   drawTextGuidance(String(std::string(170, 'A')));
   for (const auto& sample : display.textSamples) {
@@ -325,10 +403,10 @@ int main() {
   assert(NimBLEDevice::getAdvertising()->starts == advertising + 1);
   assert(hasNavigationInstruction);
   const size_t idlePanelStart = display.rectangles.size();
-  const size_t horizontalLinesBeforeIdle = display.horizontalLines.size();
   const int roundRectanglesBeforeIdle = display.roundRectCalls;
   drawIdleScreen();
-  assert(display.horizontalLines.size() == horizontalLinesBeforeIdle);
+  assert(std::none_of(display.horizontalLines.begin(), display.horizontalLines.end(),
+      [](const auto& line) { return line.y == Layout::PANEL_TOP; }));
   assert(display.roundRectCalls == roundRectanglesBeforeIdle);
   assert(std::find(display.text.begin(), display.text.end(),
                    "Conecte pelo app Android") != display.text.end());

@@ -41,7 +41,22 @@ export function parseMapsInstruction(notification: MapsNotification): Turn | nul
   const parts = source.split(/[·\n\r]+/).map(part => part.trim()).filter(Boolean);
   const isContext = (part: string) =>
     /^(?:\d+(?:[.,]\d+)?\s*(?:m|km)\s*[,–-]?\s*)?em direcao (?:a|ao|aos|as)\s+\S/.test(normalized(part));
-  const context = parts.find(isContext)
+  const contextIndex = parts.findIndex(isContext);
+  const contextPart = contextIndex >= 0 ? parts[contextIndex] : undefined;
+  const contextDistanceMatch = contextPart?.match(
+    /^\s*(\d+(?:[.,]\d+)?)\s*(km|quil[oô]metros?|m|metros?)\s*[,–-]?\s*em dire[cç][aã]o\b/i,
+  ) ?? (contextIndex > 0
+    ? parts[contextIndex - 1].match(/^\s*(\d+(?:[.,]\d+)?)\s*(km|quil[oô]metros?|m|metros?)\s*$/i)
+    : null);
+  const contextDistanceValue = contextDistanceMatch
+    ? Number(contextDistanceMatch[1].replace(',', '.'))
+    : null;
+  const contextDistanceMeters = contextDistanceMatch && Number.isFinite(contextDistanceValue)
+    ? Math.min(65535, Math.max(0, Math.round(
+        (contextDistanceValue ?? 0) * (/^(km|quil)/i.test(contextDistanceMatch[2]) ? 1000 : 1),
+      )))
+    : null;
+  const context = contextPart
     ?.replace(/^\d+(?:[.,]\d+)?\s*(?:m|km)\s*[,–-]?\s*/i, '')
     ?.replace(/\s+\d+\s*(?:min(?:utos?)?|h(?:oras?)?)\b.*$/i, '')
     .replace(/\s+chegada\b.*$/i, '').trim();
@@ -65,7 +80,7 @@ export function parseMapsInstruction(notification: MapsNotification): Turn | nul
     return {
       maneuver: 'text',
       label: maneuverLabels.text,
-      distanceMeters: null,
+      distanceMeters: contextDistanceMeters,
       road: context,
     };
   }
@@ -87,8 +102,9 @@ export function makeNavigationCommand(turn: Turn, timestamp = Date.now()): strin
   const payload = {
     type: 'navigation',
     maneuver: turn.maneuver,
-    // A textual heading has no known distance to the next maneuver.
-    distanceMeters: turn.maneuver === 'text' ? undefined : turn.distanceMeters,
+    // Textual guidance includes distance only when it is attached to that
+    // guidance field, never from the route-summary distance to destination.
+    distanceMeters: turn.distanceMeters === null ? undefined : turn.distanceMeters,
     // Built-in TFT fonts: send ASCII for this wrapped textual mode only.
     road: turn.maneuver === 'text'
       ? turn.road.normalize('NFD').replace(/[\u0300-\u036f]/g, '')

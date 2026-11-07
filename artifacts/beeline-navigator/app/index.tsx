@@ -415,7 +415,7 @@ export default function HomeScreen() {
                   <Text style={[styles.turnLabel, { color: colors.card }]}>{liveTurn.label}</Text>
                 </View>
                 {liveTurn.maneuver !== 'text' && <View style={styles.distanceBlock}>
-                  <Text style={[styles.distance, { color: colors.card }]}>{liveTurn.distanceMeters || '—'}</Text>
+                  <Text style={[styles.distance, { color: colors.card }]}>{liveTurn.distanceMeters ?? '—'}</Text>
                   <Text style={[styles.distanceUnit, { color: colors.mutedForeground }]}>METROS</Text>
                 </View>}
               </View>
@@ -424,9 +424,21 @@ export default function HomeScreen() {
                 <Text style={[styles.roadText, { color: colors.card }]}>{liveTurn.road || 'Via não informada'}</Text>
               </View>
               {liveTurn.maneuver === 'text' && (
-                <Text style={[styles.emptyHint, { color: colors.mutedForeground }]}>
-                  O Maps informou uma orientação textual, sem manobra identificada.
-                </Text>
+                <>
+                  {liveTurn.distanceMeters !== null && (
+                    <View style={styles.textDistanceBlock}>
+                      <Text style={[styles.textDistance, { color: colors.card }]}>
+                        {liveTurn.distanceMeters} m
+                      </Text>
+                      <Text style={[styles.distanceUnit, { color: colors.mutedForeground }]}>
+                        ATÉ A ORIENTAÇÃO
+                      </Text>
+                    </View>
+                  )}
+                  <Text style={[styles.emptyHint, { color: colors.mutedForeground }]}>
+                    O Maps informou uma orientação textual, sem manobra identificada.
+                  </Text>
+                </>
               )}
             </>
           ) : (
@@ -684,6 +696,8 @@ const styles = StyleSheet.create({
   distanceBlock: { alignItems: 'flex-end', justifyContent: 'center' },
   distance: { fontSize: 44, lineHeight: 49, letterSpacing: -2, fontFamily: 'Inter_700Bold' },
   distanceUnit: { fontSize: 9, letterSpacing: 1.2, fontFamily: 'Inter_600SemiBold', marginTop: 1 },
+  textDistanceBlock: { alignItems: 'flex-start', marginTop: 8, marginLeft: 18 },
+  textDistance: { fontSize: 28, lineHeight: 34, letterSpacing: -1, fontFamily: 'Inter_700Bold' },
   roadRow: { minHeight: 52, borderTopWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 17 },
   roadText: { flex: 1, fontSize: 12, fontFamily: 'Inter_500Medium' },
   demoNote: { fontSize: 11, lineHeight: 16, marginTop: 8, marginBottom: 24 },

@@ -16,16 +16,25 @@
 
 #include <ArduinoJson.h>
 #include <NimBLEDevice.h>
+#include <Preferences.h>
+#include <SPI.h>
 #include <TFT_eSPI.h>
+#include <XPT2046_Touchscreen.h>
 #include <freertos/FreeRTOS.h>
 #include <math.h>
 #include <limits.h>
 #include "navigation-font.h"
+#include "touch-calibration.h"
 
 static constexpr char DEVICE_NAME[] = "BeeLine-ESP32";
 static constexpr char SERVICE_UUID[] = "7b1e0001-6d2a-4f7a-9c21-8e8a4b12a001";
 static constexpr char COMMAND_UUID[] = "7b1e0002-6d2a-4f7a-9c21-8e8a4b12a001";
 static constexpr uint8_t TFT_BACKLIGHT_PIN = 21;
+static constexpr uint8_t TOUCH_CS_PIN = 33;
+static constexpr uint8_t TOUCH_IRQ_PIN = 36;
+static constexpr uint8_t TOUCH_MOSI_PIN = 32;
+static constexpr uint8_t TOUCH_MISO_PIN = 39;
+static constexpr uint8_t TOUCH_SCLK_PIN = 25;
 static constexpr uint8_t DEFAULT_DISPLAY_ROTATION = 1;
 static constexpr int16_t DISPLAY_LANDSCAPE_WIDTH = 320;
 static constexpr int16_t DISPLAY_LANDSCAPE_HEIGHT = 240;
@@ -37,6 +46,7 @@ static constexpr uint32_t HEADING_TIMEOUT_MS = 8000;
 static constexpr uint32_t ROUTE_TIMEOUT_MS = 30000;
 static constexpr uint32_t MAX_ROUTE_METERS = 40000000;
 static constexpr uint32_t SCREEN_UPDATE_INTERVAL_MS = 100;
+static constexpr uint32_t TOUCH_POLL_INTERVAL_MS = 20;
 static constexpr uint8_t SERIAL_BYTES_PER_LOOP = 16;
 namespace Layout {
 constexpr int16_t PANEL_TOP = 193;
@@ -55,11 +65,18 @@ constexpr uint16_t GRADUATIONS[] = {0, 20, 40, 50, 60, 80, 100, 120, 140};
 constexpr int16_t ICON_CENTER_Y = 81;
 constexpr int16_t DIRECTION_Y = 5, DISTANCE_Y = 137, ROAD_Y = 171;
 constexpr unsigned int ROAD_MAX_BYTES = 23, ROAD_PREFIX_BYTES = 20;
+constexpr int16_t TEXT_DISTANCE_Y = 143, TEXT_STATUS_Y = 175;
+constexpr int16_t THEME_BUTTON_CENTER_X = 308, THEME_BUTTON_CENTER_Y = 234;
+constexpr int16_t THEME_BUTTON_LEFT = 280, THEME_BUTTON_TOP = 214;
+constexpr int16_t CALIBRATION_TARGETS_X[] = {28, 292, 292};
+constexpr int16_t CALIBRATION_TARGETS_Y[] = {34, 34, 226};
 }
 static constexpr uint16_t COLOR_BACKGROUND = 0x2104;  // neutral dark gray
 static constexpr uint16_t COLOR_SURFACE = 0x1A2C;
 static constexpr uint16_t COLOR_BLACK = 0x0000;
 static constexpr uint16_t COLOR_AMBER = 0xF6A8;
+static constexpr uint16_t COLOR_DAY_BACKGROUND = 0xFFFF;
+static constexpr uint16_t COLOR_DAY_AMBER = 0x9B40;
 static constexpr uint16_t COLOR_SPEED_MIDDLE = 0xB4A4;
 static constexpr uint16_t COLOR_SPEED_HIGH = 0x7B24;
 static constexpr uint16_t COLOR_TEXT = 0xFFFF;
@@ -70,9 +87,13 @@ struct NavigationInstruction {
   String maneuver;
   String road;
   uint16_t distanceMeters;
+  bool distanceAvailable;
 };
 
 TFT_eSPI display = TFT_eSPI();
+SPIClass touchSPI(HSPI);
+XPT2046_Touchscreen touchController(TOUCH_CS_PIN, TOUCH_IRQ_PIN);
+Preferences touchPreferences;
 float currentSpeedKmh = 0.0f;
 bool speedAvailable = false;
 unsigned long lastSpeedUpdateMs = 0;
@@ -89,12 +110,22 @@ bool speedPanelDirty = true;
 bool sidePanelDirty = true;
 bool headingAvailable = false, routeAvailable = false;
 bool headingRemembered = false; // RAM only: last valid GPS course until reboot.
+bool dayMode = false; // The requested night palette remains the boot default.
 float currentHeading = 0;
 uint32_t remainingMeters = 0, lastHeadingUpdateMs = 0, lastRouteUpdateMs = 0;
 uint32_t routeValidityMs = ROUTE_TIMEOUT_MS;
 uint32_t lastScreenUpdateMs = 0;
 int8_t pendingRotation = DEFAULT_DISPLAY_ROTATION;
 bool pendingRotationTest = false;
+TouchCalibration touchCalibration;
+bool touchCalibrationActive = false;
+bool touchWasDown = false;
+bool touchControllerReady = false;
+uint8_t touchCalibrationPoint = 0;
+uint8_t touchCalibrationRotation = DEFAULT_DISPLAY_ROTATION;
+float touchRawX[3] = {};
+float touchRawY[3] = {};
+uint32_t lastTouchPollMs = 0;
 
 // Independent, fixed-size latest-wins mailboxes. Speed bursts cannot evict
 // navigation, heading or route. Only POD copies happen under this critical section:
@@ -103,6 +134,7 @@ struct PendingNavigation {
   char maneuver[MAX_COMMAND_BYTES + 1];
   char road[MAX_COMMAND_BYTES + 1];
   uint16_t distanceMeters;
+  bool distanceAvailable;
 };
 struct PendingSpeed {
   float kmh;
@@ -154,9 +186,41 @@ struct CommandReader {
 void drawIdleScreen();
 void renderInstruction(const NavigationInstruction& instruction);
 void drawCurrentScreen();
+void drawBackground();
 void applyDisplayRotation(uint8_t rotation, bool rotationTest);
+void drawTouchCalibrationScreen();
+void pollTouchInput();
 
 int16_t navigationWidth() { return display.width() * 3 / 4; }
+
+uint16_t screenBackgroundColor() {
+  return dayMode ? COLOR_DAY_BACKGROUND : COLOR_BACKGROUND;
+}
+
+uint16_t panelBackgroundColor() {
+  return dayMode ? COLOR_DAY_BACKGROUND : COLOR_BLACK;
+}
+
+uint16_t mainTextColor() {
+  return dayMode ? COLOR_BLACK : COLOR_TEXT;
+}
+
+uint16_t highlightColor() {
+  return dayMode ? COLOR_DAY_AMBER : COLOR_AMBER;
+}
+
+bool isThemeButtonHit(int16_t x, int16_t y) {
+  return x >= Layout::THEME_BUTTON_LEFT && x < display.width() &&
+         y >= Layout::THEME_BUTTON_TOP && y < display.height();
+}
+
+void toggleDayNightMode() {
+  dayMode = !dayMode;
+  screenDirty = true;
+  speedPanelDirty = true;
+  sidePanelDirty = true;
+  Serial.printf("DISPLAY_MODE=%s\n", dayMode ? "DAY" : "NIGHT");
+}
 
 float normalizedHeading(float degrees) {
   const float angle = fmodf(degrees, 360.0f);
@@ -186,17 +250,166 @@ String remainingDistanceText() {
   return String(buffer);
 }
 
+void drawThemeToggle() {
+  const int16_t cx = Layout::THEME_BUTTON_CENTER_X;
+  const int16_t cy = Layout::THEME_BUTTON_CENTER_Y;
+  const uint16_t glyphColor = highlightColor();
+  if (dayMode) {
+    // A crescent indicates that tapping will restore the night palette.
+    display.fillCircle(cx, cy, 5, glyphColor);
+    display.fillCircle(cx + 3, cy - 3, 5, panelBackgroundColor());
+    display.drawCircle(cx, cy, 5, glyphColor);
+  } else {
+    display.drawCircle(cx, cy, 3, glyphColor);
+    display.fillCircle(cx, cy, 2, glyphColor);
+    display.drawFastVLine(cx, cy - 7, 2, glyphColor);
+    display.drawFastVLine(cx, cy + 6, 2, glyphColor);
+    display.drawFastHLine(cx - 7, cy, 2, glyphColor);
+    display.drawFastHLine(cx + 6, cy, 2, glyphColor);
+    display.drawLine(cx - 5, cy - 5, cx - 4, cy - 4, glyphColor);
+    display.drawLine(cx + 4, cy + 4, cx + 5, cy + 5, glyphColor);
+    display.drawLine(cx + 4, cy - 4, cx + 5, cy - 5, glyphColor);
+    display.drawLine(cx - 5, cy + 5, cx - 4, cy + 4, glyphColor);
+  }
+}
+
+void drawTouchCalibrationScreen() {
+  drawBackground();
+  display.setTextDatum(TC_DATUM);
+  display.setTextColor(highlightColor());
+  display.drawCentreString("CALIBRAR TOQUE", display.width() / 2, 10, 2);
+  display.setTextColor(mainTextColor());
+  display.drawCentreString("Toque no centro de cada X", display.width() / 2, 32, 1);
+  display.setTextColor(COLOR_MUTED);
+  display.drawCentreString(String(touchCalibrationPoint + 1) + " DE 3",
+                           display.width() / 2, display.height() / 2 - 5, 1);
+
+  const int16_t x = Layout::CALIBRATION_TARGETS_X[touchCalibrationPoint];
+  const int16_t y = Layout::CALIBRATION_TARGETS_Y[touchCalibrationPoint];
+  const uint16_t color = highlightColor();
+  display.drawCircle(x, y, 9, color);
+  display.drawFastHLine(x - 15, y, 31, color);
+  display.drawFastVLine(x, y - 15, 31, color);
+  display.fillCircle(x, y, 2, color);
+}
+
+bool loadTouchCalibration() {
+  if (!touchPreferences.begin("bl_touch", true)) return false;
+  TouchCalibration saved;
+  const bool hasData =
+      touchPreferences.getBytesLength("affine") == sizeof(saved) &&
+      touchPreferences.getUChar("rotation", 255) == activeDisplayRotation &&
+      touchPreferences.getBytes("affine", &saved, sizeof(saved)) == sizeof(saved);
+  touchPreferences.end();
+  if (!hasData || !saved.isValid()) return false;
+  touchCalibration = saved;
+  return true;
+}
+
+void saveTouchCalibration() {
+  if (!touchPreferences.begin("bl_touch", false)) {
+    Serial.println("[TOUCH] NVS indisponivel; recalibracao sera necessaria no proximo boot.");
+    return;
+  }
+  const size_t written = touchPreferences.putBytes("affine", &touchCalibration,
+                                                    sizeof(touchCalibration));
+  touchPreferences.putUChar("rotation", activeDisplayRotation);
+  touchPreferences.end();
+  if (written != sizeof(touchCalibration)) {
+    Serial.println("[TOUCH] Falha ao salvar calibracao; recalibracao sera necessaria no proximo boot.");
+  } else {
+    Serial.println("[TOUCH] Calibracao salva.");
+  }
+}
+
+void initializeTouchController() {
+  // The XPT2046 on this ESP32-2432S028 revision has its own SPI pins,
+  // separate from the validated TFT_eSPI bus.
+  touchSPI.begin(TOUCH_SCLK_PIN, TOUCH_MISO_PIN, TOUCH_MOSI_PIN, TOUCH_CS_PIN);
+  touchControllerReady = touchController.begin(touchSPI);
+  touchController.setRotation(0);
+  if (!touchControllerReady) {
+    Serial.println("[TOUCH] Controlador XPT2046 nao inicializou.");
+    return;
+  }
+
+  if (loadTouchCalibration()) {
+    Serial.println("[TOUCH] Calibracao carregada.");
+    return;
+  }
+  touchCalibrationActive = true;
+  touchCalibrationPoint = 0;
+  Serial.println("[TOUCH] Toque nos tres alvos para calibrar o modo dia/noite.");
+}
+
+void acceptTouchCalibrationPoint(const TS_Point& point) {
+  touchRawX[touchCalibrationPoint] = point.x;
+  touchRawY[touchCalibrationPoint] = point.y;
+  ++touchCalibrationPoint;
+  if (touchCalibrationPoint < 3) {
+    screenDirty = true;
+    return;
+  }
+
+  const float screenX[] = {
+      static_cast<float>(Layout::CALIBRATION_TARGETS_X[0]),
+      static_cast<float>(Layout::CALIBRATION_TARGETS_X[1]),
+      static_cast<float>(Layout::CALIBRATION_TARGETS_X[2]),
+  };
+  const float screenY[] = {
+      static_cast<float>(Layout::CALIBRATION_TARGETS_Y[0]),
+      static_cast<float>(Layout::CALIBRATION_TARGETS_Y[1]),
+      static_cast<float>(Layout::CALIBRATION_TARGETS_Y[2]),
+  };
+  if (!TouchCalibration::fromThreePoints(touchRawX, touchRawY, screenX, screenY,
+                                         touchCalibration)) {
+    Serial.println("[TOUCH] Calibracao invalida; iniciando novamente.");
+    touchCalibrationPoint = 0;
+    screenDirty = true;
+    return;
+  }
+  saveTouchCalibration();
+  touchCalibrationActive = false;
+  screenDirty = true;
+  Serial.println("[TOUCH] Calibracao concluida.");
+}
+
+void pollTouchInput() {
+  if (!touchControllerReady || orientationCheckActive) return;
+  const uint32_t now = millis();
+  if (static_cast<uint32_t>(now - lastTouchPollMs) < TOUCH_POLL_INTERVAL_MS) return;
+  lastTouchPollMs = now;
+
+  if (!touchController.touched()) {
+    touchWasDown = false;
+    return;
+  }
+  if (touchWasDown) return;
+  touchWasDown = true;
+  const TS_Point point = touchController.getPoint();
+  if (touchCalibrationActive) {
+    acceptTouchCalibrationPoint(point);
+    return;
+  }
+
+  int16_t x, y;
+  if (touchCalibration.map(point.x, point.y, display.width(), display.height(), x, y) &&
+      isThemeButtonHit(x, y)) {
+    toggleDayNightMode();
+  }
+}
+
 void drawSidePanel() {
   const int16_t left = navigationWidth();
   const int16_t width = display.width() - left;
   const int16_t cx = left + width / 2, cy = 60;
-  display.fillRect(left, 0, width, Layout::PANEL_TOP, COLOR_BACKGROUND);
+  display.fillRect(left, 0, width, Layout::PANEL_TOP, screenBackgroundColor());
   display.fillCircle(cx, cy, width / 2 - 18, COLOR_SPEED_MIDDLE);
   // Fixed north-up pointer shape; only cardinal positions orbit with the course.
-  display.fillTriangle(cx, cy - 16, cx - 9, cy + 12, cx, cy + 7, COLOR_BACKGROUND);
-  display.fillTriangle(cx, cy - 16, cx + 9, cy + 12, cx, cy + 7, COLOR_BACKGROUND);
+  display.fillTriangle(cx, cy - 16, cx - 9, cy + 12, cx, cy + 7, screenBackgroundColor());
+  display.fillTriangle(cx, cy - 16, cx + 9, cy + 12, cx, cy + 7, screenBackgroundColor());
   display.setTextDatum(MC_DATUM);
-  display.setTextColor(COLOR_TEXT);
+  display.setTextColor(mainTextColor());
   if (headingRemembered) {
     static const char* const labels[] = {"N", "E", "S", "W"};
     for (uint8_t i = 0; i < 4; ++i) {
@@ -218,7 +431,7 @@ void drawSidePanel() {
   }
   display.setTextColor(COLOR_MUTED);
   display.drawString("DESTINO", cx, 145, 1);
-  display.setTextColor(routeAvailable ? COLOR_TEXT : COLOR_MUTED);
+  display.setTextColor(routeAvailable ? mainTextColor() : COLOR_MUTED);
   display.drawString(remainingDistanceText(), cx, 166, 2);
 }
 
@@ -248,11 +461,11 @@ void drawManeuverIcon(const String& maneuver) {
       (navigationWidth() - NavigationFont::kWidth) / 2,
       Layout::ICON_CENTER_Y - NavigationFont::kHeight / 2,
       NavigationFont::kMasks[index], NavigationFont::kWidth, NavigationFont::kHeight,
-      COLOR_AMBER);
+      highlightColor());
 }
 
 void drawBackground() {
-  display.fillScreen(COLOR_BACKGROUND);
+  display.fillScreen(screenBackgroundColor());
 }
 
 int8_t speedBand(float kmh) {
@@ -270,12 +483,12 @@ void drawSpeedPanel() {
   const int16_t barY = BAR_Y;
   const int16_t barHeight = BAR_HEIGHT;
 
-  display.fillRect(0, panelTop, width, display.height() - panelTop, COLOR_BLACK);
+  display.fillRect(0, panelTop, width, display.height() - panelTop, panelBackgroundColor());
 
   display.setTextDatum(TL_DATUM);
   display.setTextColor(COLOR_MUTED);
   display.drawString("VELOCIDADE", SPEED_LABEL_X, SPEED_LABEL_Y, 1);
-  display.setTextColor(speedAvailable ? COLOR_TEXT : COLOR_MUTED);
+  display.setTextColor(speedAvailable ? mainTextColor() : COLOR_MUTED);
   display.drawString(speedAvailable ? String(static_cast<int>(roundf(currentSpeedKmh))) : "--",
                      SPEED_LABEL_X, SPEED_VALUE_Y, 4);
   display.setTextColor(COLOR_MUTED);
@@ -286,24 +499,24 @@ void drawSpeedPanel() {
                    barY - SCALE_BACKING_PADDING,
                    scaleWidth + 2 * SCALE_BACKING_PADDING,
                    barHeight + 2 * SCALE_BACKING_PADDING,
-                   COLOR_BLACK);
+                    panelBackgroundColor());
   const int16_t mark50 = scaleX + static_cast<int16_t>(scaleWidth * float(GREEN_LIMIT) / SCALE_MAX);
   const int16_t mark100 = scaleX + static_cast<int16_t>(scaleWidth * float(YELLOW_LIMIT) / SCALE_MAX);
   const int8_t activeBand = speedAvailable ? speedBand(currentSpeedKmh) : -1;
   display.fillRect(scaleX, barY, mark50 - scaleX, barHeight,
-                   activeBand == 0 ? COLOR_AMBER : COLOR_SPEED_HIGH);
+                    activeBand == 0 ? highlightColor() : COLOR_SPEED_HIGH);
   display.fillRect(mark50, barY, mark100 - mark50, barHeight,
-                   activeBand == 1 ? COLOR_AMBER : COLOR_SPEED_HIGH);
+                    activeBand == 1 ? highlightColor() : COLOR_SPEED_HIGH);
   display.fillRect(mark100, barY, scaleX + scaleWidth - mark100, barHeight,
-                   activeBand == 2 ? COLOR_AMBER : COLOR_SPEED_HIGH);
+                    activeBand == 2 ? highlightColor() : COLOR_SPEED_HIGH);
 
   for (const uint16_t value : GRADUATIONS) {
     const int16_t x = scaleX + static_cast<int16_t>(scaleWidth * float(value) / SCALE_MAX);
     const bool special = value == GREEN_LIMIT || value == YELLOW_LIMIT;
     display.drawFastVLine(x, barY - (special ? 7 : 4), barHeight + (special ? 14 : 8),
-                          special ? COLOR_AMBER : COLOR_MUTED);
+                          special ? highlightColor() : COLOR_MUTED);
     display.setTextDatum(TC_DATUM);
-    display.setTextColor(special ? COLOR_AMBER : COLOR_MUTED);
+    display.setTextColor(special ? highlightColor() : COLOR_MUTED);
     display.drawString(String(value), x, SCALE_LABEL_Y, 1);
   }
 
@@ -312,14 +525,15 @@ void drawSpeedPanel() {
     const int16_t markerX = scaleX + static_cast<int16_t>(scaleWidth * boundedSpeed / SCALE_MAX);
     const int16_t markerTop = barY - MARKER_TOP_OFFSET;
     display.fillRect(markerX - MARKER_WIDTH / 2, markerTop, MARKER_WIDTH,
-                     barHeight + MARKER_TOP_OFFSET + 4, COLOR_TEXT);
+                     barHeight + MARKER_TOP_OFFSET + 4, mainTextColor());
     // Downward tip touches the top of the 2px marker, all within the black panel.
     display.fillTriangle(markerX - MARKER_TRIANGLE_HALF_WIDTH,
                          markerTop - MARKER_TRIANGLE_HEIGHT,
                          markerX + MARKER_TRIANGLE_HALF_WIDTH,
                          markerTop - MARKER_TRIANGLE_HEIGHT,
-                         markerX, markerTop, COLOR_TEXT);
+                          markerX, markerTop, mainTextColor());
   }
+  drawThemeToggle();
 }
 
 void drawOrientationCheck(bool rotationTest) {
@@ -329,9 +543,9 @@ void drawOrientationCheck(bool rotationTest) {
                          height == DISPLAY_LANDSCAPE_HEIGHT;
 
   drawBackground();
-  display.drawRect(0, 0, width, height, COLOR_AMBER);
+  display.drawRect(0, 0, width, height, highlightColor());
   display.setTextDatum(TC_DATUM);
-  display.setTextColor(COLOR_AMBER);
+  display.setTextColor(highlightColor());
   display.drawCentreString("BEELINE TFT", width / 2, height / 2 - 46, 2);
   String status;
   if (rotationTest) {
@@ -340,7 +554,7 @@ void drawOrientationCheck(bool rotationTest) {
   } else {
     status = landscape ? "LANDSCAPE OK" : "CHECK TFT SETUP";
   }
-  display.setTextColor(rotationTest || landscape ? COLOR_TEXT : COLOR_RED);
+  display.setTextColor(rotationTest || landscape ? mainTextColor() : COLOR_RED);
   display.drawCentreString(status, width / 2, height / 2 - 14, 2);
   display.setTextColor(COLOR_MUTED);
   display.drawCentreString(String(width) + " x " + String(height),
@@ -352,7 +566,7 @@ void drawIdleScreen() {
   display.setTextDatum(MC_DATUM);
   display.setTextColor(COLOR_MUTED);
   display.drawString("Aguardando instrucoes", navigationWidth() / 2, Layout::PANEL_TOP / 2 - 16, 2);
-  display.setTextColor(COLOR_TEXT);
+  display.setTextColor(mainTextColor());
   display.drawString("Conecte pelo app Android", navigationWidth() / 2, Layout::PANEL_TOP / 2 + 16,
                      navigationWidth() < 220 ? 1 : 2);
   drawSidePanel();
@@ -364,7 +578,7 @@ void drawTextGuidance(const String& text) {
   const uint16_t length = text.length();
   uint16_t offset = 0;
   display.setTextDatum(TC_DATUM);
-  display.setTextColor(COLOR_TEXT);
+  display.setTextColor(mainTextColor());
   for (uint8_t line = 0; line < 4 && offset < length; ++line) {
     uint16_t end = offset;
     uint16_t lastSpace = offset;
@@ -388,7 +602,8 @@ void drawTextGuidance(const String& text) {
     while (offset < length && text.c_str()[offset] == ' ') ++offset;
   }
   display.setTextColor(COLOR_MUTED);
-  display.drawString("Sem manobra informada", navigationWidth() / 2, 165, 2);
+    display.drawString("Sem manobra informada", navigationWidth() / 2,
+                       Layout::TEXT_STATUS_Y, 2);
 }
 
 void renderInstruction(const NavigationInstruction& instruction) {
@@ -398,6 +613,12 @@ void renderInstruction(const NavigationInstruction& instruction) {
   if (instruction.maneuver == "text") {
     display.drawString("ORIENTACAO DO MAPS", navigationWidth() / 2, Layout::DIRECTION_Y, 2);
     drawTextGuidance(instruction.road);
+    if (instruction.distanceAvailable) {
+      display.setTextDatum(MC_DATUM);
+      display.setTextColor(mainTextColor());
+      display.drawString(String(instruction.distanceMeters) + " m",
+                         navigationWidth() / 2, Layout::TEXT_DISTANCE_Y, 4);
+    }
     drawSidePanel();
     drawSpeedPanel();
     return;
@@ -406,7 +627,7 @@ void renderInstruction(const NavigationInstruction& instruction) {
   drawManeuverIcon(instruction.maneuver);
 
   display.setTextDatum(MC_DATUM);
-  display.setTextColor(COLOR_TEXT);
+  display.setTextColor(mainTextColor());
   display.drawString(String(instruction.distanceMeters) + " m",
                      navigationWidth() / 2, Layout::DISTANCE_Y, 4);
   if (instruction.road.length() > 0) {
@@ -426,6 +647,10 @@ void renderInstruction(const NavigationInstruction& instruction) {
 }
 
 void drawCurrentScreen() {
+  if (touchCalibrationActive) {
+    drawTouchCalibrationScreen();
+    return;
+  }
   if (hasNavigationInstruction) {
     renderInstruction(currentInstruction);
   } else {
@@ -567,6 +792,7 @@ class CommandCallbacks final : public NimBLECharacteristicCallbacks {
     strcpy(update.maneuver, maneuver);
     strcpy(update.road, road);
     update.distanceMeters = static_cast<uint16_t>(distance < 0 ? 0 : distance > 65535 ? 65535 : distance);
+    update.distanceAvailable = !object["distanceMeters"].isUnbound();
     portENTER_CRITICAL(&pendingMux);
     pendingNavigation = update;
     navigationPending = true;
@@ -610,12 +836,14 @@ void processPendingCommands() {
     if (!hasNavigationInstruction ||
         currentInstruction.maneuver != String(navigation.maneuver) ||
         currentInstruction.distanceMeters != navigation.distanceMeters ||
+        currentInstruction.distanceAvailable != navigation.distanceAvailable ||
         (String(navigation.maneuver) == "text"
           ? currentInstruction.road != String(navigation.road)
           : visibleRoad(currentInstruction.road) != visibleRoad(String(navigation.road)))) {
       screenDirty = true;
     }
-    currentInstruction = {String(navigation.maneuver), String(navigation.road), navigation.distanceMeters};
+    currentInstruction = {String(navigation.maneuver), String(navigation.road),
+                          navigation.distanceMeters, navigation.distanceAvailable};
     hasNavigationInstruction = true;
     Serial.printf("TURN=%s | DISTANCE=%um | ROAD=%s\n",
                   navigation.maneuver, navigation.distanceMeters, navigation.road);
@@ -681,6 +909,7 @@ void setup() {
   pinMode(TFT_BACKLIGHT_PIN, OUTPUT);
   digitalWrite(TFT_BACKLIGHT_PIN, HIGH);
   display.init();
+  initializeTouchController();
 
   NimBLEDevice::init(DEVICE_NAME);
   NimBLEDevice::setMTU(247);
@@ -724,6 +953,7 @@ void loop() {
     orientationCheckActive = false;
     screenDirty = true;
   }
+  pollTouchInput();
 
   if (speedAvailable && static_cast<uint32_t>(now - lastSpeedUpdateMs) >= SPEED_TIMEOUT_MS) {
     speedAvailable = false;

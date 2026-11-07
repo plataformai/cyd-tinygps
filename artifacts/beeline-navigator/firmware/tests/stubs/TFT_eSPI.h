@@ -51,6 +51,8 @@ struct TFT_eSPI {
     touch(); circles.push_back({x, y, radius, color});
     trace("circle\t%d\t%d\t%d\t%d\n", x, y, radius, color);
   }
+  void drawCircle(int, int, int, int) { touch(); }
+  void drawLine(int, int, int, int, int) { touch(); }
   int textWidth(const String& value, int font) { touch(); return value.length() * (font == 1 ? 6 : 8); }
   void drawFastHLine(int x, int y, int width, int color) {
     touch(); horizontalLines.push_back({x, y, width, static_cast<uint16_t>(color)});

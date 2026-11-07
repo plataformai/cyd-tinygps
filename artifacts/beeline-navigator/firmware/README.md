@@ -39,7 +39,8 @@ g++ e `ARDUINOJSON_DIR` apontando para ArduinoJson 7.x. A saída fica em
 ## Preparar
 
 1. Instale o Arduino IDE e o suporte às placas ESP32.
-2. Instale as bibliotecas **NimBLE-Arduino 2.x**, **ArduinoJson 7.x** e **TFT_eSPI**.
+2. Instale as bibliotecas **NimBLE-Arduino 2.x**, **ArduinoJson 7.x**,
+   **TFT_eSPI** e **XPT2046_Touchscreen** (Paul Stoffregen).
 3. Para a placa do usuário (ESP32-2432S028 com revisão de dois conectores USB, já confirmada), configure o `User_Setup.h` do TFT_eSPI:
 
    ```cpp
@@ -58,10 +59,16 @@ g++ e `ARDUINOJSON_DIR` apontando para ArduinoJson 7.x. A saída fica em
    #define TFT_BACKLIGHT_ON HIGH
    ```
 
-4. Extraia `beeline-firmware.zip` inteiro e abra `beeline-esp32/beeline-esp32.ino`. **Mantenha `navigation-font.h` na mesma pasta do `.ino`**: ele contém os ícones extraídos da fonte. O ZIP também inclui `LICENSE-font.txt` e este README. A pasta e o `.ino` têm o mesmo nome, como o Arduino IDE exige. Selecione **ESP32 Dev Module** e envie o sketch. `display.setRotation()` é aplicado no primeiro ciclo do loop. A tela de verificação aparece por 1,2 segundo sem bloquear a inicialização do BLE.
-5. Abra o monitor serial em `115200` baud. O resultado esperado inclui `BeeLine-ESP32 ready` e, na primeira passagem do loop com a rotação padrão `1`, `[INFO] Rotacao aplicada: 1 (Largura=320 Altura=240)`.
-6. Para testar a orientação sem recompilar, configure o monitor serial para **Nova linha** (ou **Ambos NL e CR**) e envie `r0`, `r1`, `r2` ou `r3`. O firmware mostra a rotação e a resolução selecionadas por 1,2 segundo, e depois restaura a tela de navegação ou espera. Em geral, `r0` e `r2` são retrato (240 x 320), enquanto `r1` e `r3` são paisagem (320 x 240); a posição visual pode variar conforme a montagem da placa. Escolha a orientação correta e altere `DEFAULT_DISPLAY_ROTATION` para esse valor antes de gravar a versão definitiva. O teste é temporário: reiniciar a placa restaura esse valor padrão.
-7. Se nenhuma rotação resultar em `320 x 240`, confira se `User_Setup_Select.h` seleciona o `User_Setup.h` que você editou, o driver e os pinos da revisão exata da placa. A configuração acima corresponde à placa do usuário que já foi confirmada; outras revisões podem usar um controlador diferente. CS/DC trocados ou driver incorreto normalmente causam falha, imagem corrompida ou ausência de imagem; não são um mecanismo confiável de fallback para retrato. O firmware usa uma única instância global do display.
+   O touch usa o barramento SPI separado do display nesta revisão. **Não altere**
+   os pinos TFT acima nem habilite `TOUCH_CS` no TFT_eSPI; o firmware lê o
+   XPT2046 no barramento próprio usando CS 33, IRQ 36, SCLK 25, MISO 39 e MOSI
+   32.
+
+4. Extraia `beeline-firmware.zip` inteiro e abra `beeline-esp32/beeline-esp32.ino`. **Mantenha `navigation-font.h` e `touch-calibration.h` na mesma pasta do `.ino`**: eles contêm os ícones e o cálculo de calibração do touch. O ZIP também inclui `LICENSE-font.txt` e este README. A pasta e o `.ino` têm o mesmo nome, como o Arduino IDE exige. Selecione **ESP32 Dev Module** e envie o sketch. `display.setRotation()` é aplicado no primeiro ciclo do loop. A tela de verificação aparece por 1,2 segundo sem bloquear a inicialização do BLE.
+5. Na primeira inicialização, toque no centro dos três alvos de calibração. A calibração é salva na NVS da própria placa e só será repetida se for apagada ou se a rotação do display mudar. Depois, toque no ícone sol/lua no canto inferior direito para alternar entre noite e dia. O modo noturno continua sendo o padrão após reiniciar.
+6. Abra o monitor serial em `115200` baud. O resultado esperado inclui `BeeLine-ESP32 ready` e, na primeira passagem do loop com a rotação padrão `1`, `[INFO] Rotacao aplicada: 1 (Largura=320 Altura=240)`.
+7. Para testar a orientação sem recompilar, configure o monitor serial para **Nova linha** (ou **Ambos NL e CR**) e envie `r0`, `r1`, `r2` ou `r3`. O firmware mostra a rotação e a resolução selecionadas por 1,2 segundo, e depois restaura a tela de navegação ou espera. Em geral, `r0` e `r2` são retrato (240 x 320), enquanto `r1` e `r3` são paisagem (320 x 240); a posição visual pode variar conforme a montagem da placa. Escolha a orientação correta e altere `DEFAULT_DISPLAY_ROTATION` para esse valor antes de gravar a versão definitiva. O teste é temporário: reiniciar a placa restaura esse valor padrão.
+8. Se nenhuma rotação resultar em `320 x 240`, confira se `User_Setup_Select.h` seleciona o `User_Setup.h` que você editou, o driver e os pinos da revisão exata da placa. A configuração acima corresponde à placa do usuário que já foi confirmada; outras revisões podem usar um controlador diferente. CS/DC trocados ou driver incorreto normalmente causam falha, imagem corrompida ou ausência de imagem; não são um mecanismo confiável de fallback para retrato. O firmware usa uma única instância global do display.
 
 ## Contrato BLE
 
@@ -118,9 +125,9 @@ Os UUIDs e os comandos anteriores não mudaram. Os novos comandos também são J
 - O callback BLE apenas limita, interpreta e valida o pacote e publica uma cópia de tamanho fixo. Não desenha, não imprime no serial e não segura um mutex durante desenho ou interpretação JSON.
 - Há **quatro posições independentes** de armazenamento pendente: navegação, velocidade, rumo e distância restante. Em cada tipo, a última mensagem válida recebida substitui a anterior ainda pendente. Mensagens intermediárias podem ser combinadas; não há fila crescente nem garantia de exibir cada amostra. Uma rajada de velocidade nunca elimina os outros tipos. Uma leitura `valid:false` tem a mesma prioridade de chegada de qualquer outra leitura do mesmo tipo.
 - Uma seção crítica entre os núcleos protege somente cópias das estruturas fixas e flags. Strings dinâmicas, logs, estado visível e TFT pertencem ao loop principal. Cada passagem consome no máximo uma mensagem de cada tipo e 16 bytes seriais.
-- O painel normal é atualizado no máximo uma vez por 100 ms (10 Hz), somente quando necessário. Navegação compara ângulo visível, distância e texto truncado da via; velocidade compara disponibilidade, número arredondado e posição do marcador. Uma leitura repetida renova o prazo de validade sem forçar desenho.
+- O painel normal é atualizado no máximo uma vez por 100 ms (10 Hz), somente quando necessário. Navegação compara ângulo visível, distância disponível, distância e texto truncado da via; velocidade compara disponibilidade, número arredondado e posição do marcador. Uma leitura repetida renova o prazo de validade sem forçar desenho.
 - Alterar somente a velocidade redesenha somente o painel inferior. Rumo e distância restante redesenham somente a coluna direita. Alterar a navegação ainda exige desenho da tela inteira; estas melhorias reduzem trabalho redundante, mas não prometem eliminar toda cintilação.
-- A área principal usa preenchimento sólido em cinza-escuro. Toda a faixa inferior, incluindo leitura de velocidade e régua, usa fundo preto, sem linha divisória azul; o aviso de conexão não tem contorno. Não há framebuffer adicional alocado. O restante da tela só é redesenhado quando uma instrução visível muda; uma alteração da velocidade repinta somente o painel inferior.
+- O modo noturno padrão usa a área principal cinza-escura e a faixa inferior preta, sem linha divisória azul; o aviso de conexão não tem contorno. O modo diurno troca os fundos escuros por branco, os textos brancos por preto e o amarelo claro por amarelo escuro. Cinzas e amarelos intermediários permanecem iguais. O ícone sol/lua no canto inferior direito alterna os modos; a escolha fica em RAM e reiniciar restaura noite. Não há framebuffer adicional alocado.
 - `r0`–`r3` continuam disponíveis. A última rotação completa recebida em uma passagem é aplicada pelo loop e mostra o diagnóstico por 1,2 segundo, fora do limite normal de atualização. Comandos longos são descartados até a próxima quebra de linha. Durante o diagnóstico, navegação e velocidade continuam sendo processadas sem substituir a tela temporária; ao terminar, a última navegação e a disponibilidade atual da velocidade são restauradas.
 - Coordenadas e limites do painel ficam em `Layout`. O modo de diagnóstico em retrato preserva o preenchimento sólido e não altera o setup do display.
 
@@ -134,22 +141,23 @@ O texto do rumo usa oito direções em inglês (N, NE, E, SE, S, SW, W, NW), par
 
 ### Firmware e download para build local
 
-Para compilar localmente, baixe `beeline-firmware.zip`, extraia os arquivos e abra `beeline-esp32/beeline-esp32.ino` no Arduino IDE. Agora **não basta copiar somente o `.ino`**: mantenha `navigation-font.h` junto dele. O ZIP já contém ambos, a licença e este README. Não é necessária outra biblioteca Arduino além de **NimBLE-Arduino 2.x, ArduinoJson 7.x e TFT_eSPI** já usadas pelo firmware. Configure o `User_Setup.h` do display como antes e compile/grave normalmente.
+Para compilar localmente, baixe `beeline-firmware.zip`, extraia os arquivos e abra `beeline-esp32/beeline-esp32.ino` no Arduino IDE. Agora **não basta copiar somente o `.ino`**: mantenha `navigation-font.h` e `touch-calibration.h` junto dele. O ZIP já contém os dois, a licença e este README. Instale **NimBLE-Arduino 2.x, ArduinoJson 7.x, TFT_eSPI e XPT2046_Touchscreen**. Configure o `User_Setup.h` do display como antes; não mude os pinos TFT nem adicione o touch ao setup de TFT_eSPI.
 
 ### Orientação textual sem manobra
 
 O APK também reconhece orientações contextuais como `em direção a R. Exemplo`.
-Quando não há uma manobra explícita, envia `maneuver: "text"` e a frase em `road`,
-**sem `distanceMeters`**. O firmware apaga a indicação anterior, mostra o texto
-em até quatro linhas e a legenda `Sem manobra informada`. Não desenha seta,
-interrogação nem `0 m` nesse modo. Frases longas recebem reticências.
+Quando não há uma manobra explícita, envia `maneuver: "text"` e a frase em `road`.
+Se houver uma distância diretamente associada a essa frase — por exemplo,
+`250 m · em direção a R. Exemplo` — também envia `distanceMeters`; a ESP32 mostra
+o valor abaixo do texto. Se não houver esse dado, não inventa `0 m`. Frases longas
+recebem reticências.
 
 Exemplo: `{"type":"navigation","maneuver":"text","road":"em direcao a R. Exemplo","timestamp":42}`.
 
-As distâncias e horários do resumo (`13 min`, `4,3 km`, `chegada 11:20`) não entram
-na orientação textual. A distância restante continua chegando pelo pacote
-`type: "route"` e permanece no painel lateral. As seis manobras direcionais
-continuam usando o protocolo e os glifos anteriores.
+As distâncias e horários do resumo (`13 min`, `4,3 km`, `chegada 11:20`) não são
+reutilizados como distância da orientação. A distância restante continua chegando
+pelo pacote `type: "route"` e permanece no painel lateral. As seis manobras
+direcionais continuam usando o protocolo e os glifos anteriores.
 
 **Esta correção exige os novos APK e firmware juntos.** Compilar apenas o novo
 firmware não muda o reconhecimento de notificações do APK instalado. O ZIP do

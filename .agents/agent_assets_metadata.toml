@@ -19,28 +19,28 @@ content_type = "image/png"
 id = "X6d5liqvopeFMUbBSZr5-"
 uri = "file://generated-artifacts/beeline-apk.zip"
 type = "unspecified"
-title = "BeeLine APK — pacote fonte mais recente"
-description = "ZIP independente atualizado. Contém o código-fonte para gerar o APK, não o arquivo APK compilado. Confirmado: Expo ~58.0.16, React Native 0.88.1 e suporte ao texto do Maps sem manobra explícita."
+title = "Pacote-fonte do app Android BeeLine"
+description = "Projeto-fonte atualizado para gerar um novo APK; este ZIP não contém APK compilado."
 logical_id = "af290ce3-4f7d-4d9a-9714-32ad72ca0cdf"
-content_hash = "sha256:a03437201c8692d8f7ccfedcab861e1c115093ccf3b5bff2d4776cd92e04e889"
-size = 1136283
-mtime_ms = 1794072667094
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/ccd297a1-3767-422a-999f-3d2c9f78264e"
-storage_version_token = "1794080082856262"
+content_hash = "sha256:67172870fca631aff8294194c0e58ad4954f5d4ee413aeb986eed18717c57466"
+size = 1136699
+mtime_ms = 1794087056643
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/63d84975-6373-4342-bd7c-6d7d3e9b7014"
+storage_version_token = "1794087184139279"
 content_type = "application/octet-stream"
 
 [[outputs]]
 id = "pxa-ZW_NUGSwaTXNdmCqZ"
 uri = "file://generated-artifacts/beeline-firmware.zip"
 type = "unspecified"
-title = "Firmware atualizado — visual e memória da bússola"
-description = "Inclui os ajustes da tela de espera, destaque dinâmico das faixas, marcador branco de 2 pixels com triângulo, círculo mais claro e último rumo em RAM até reiniciar. Extraia inteiro, mantendo navigation-font.h junto ao .ino."
+title = "Pacote do firmware BeeLine"
+description = "Firmware Arduino atualizado, incluindo calibração tátil, alternância dia/noite e as dependências documentadas."
 logical_id = "4d874922-3a75-4be6-aedf-726c4109f74b"
-content_hash = "sha256:11d322ca42519607e8a470837d755c5c9b9c83e13a4af6e127532f27523b837d"
-size = 23393
-mtime_ms = 1794061833963
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/5588a7eb-fb11-4b23-8db4-62f6f35ba147"
-storage_version_token = "1794061845854170"
+content_hash = "sha256:34e04047010a968110e64e0811ee79b9b539d37ea639f5b9ec6215cfdef1b6d5"
+size = 26655
+mtime_ms = 1794087069399
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/1f84a03a-dfa3-4c81-ae87-8f993e00d4be"
+storage_version_token = "1794087184681898"
 content_type = "application/octet-stream"
 
 [[outputs]]

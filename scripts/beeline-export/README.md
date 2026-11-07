@@ -3,6 +3,9 @@
 Este pacote inclui o reconhecimento de frases como **“em direção a R. Exemplo”**
 mesmo sem indicação de curva. O BeeLine mostra e envia o texto sem inventar uma
 seta e sem usar a distância total da rota como distância até a próxima manobra.
+Quando a notificação traz uma distância explicitamente junto dessa frase, o app
+também a exibe abaixo do texto e a envia à placa; o resumo da rota continua
+separado na distância restante ao destino.
 Instale também o firmware atualizado, com suporte a `maneuver: "text"`.
 Velocidade, rumo GPS e distância restante continuam independentes.
 
@@ -61,7 +64,9 @@ e esta versão com bússola/distância restante também exige atualizar o firmwa
   oito segundos. O app identifica esses valores como TESTE; dados reais podem
   substituí-los. Eles não são uma medição real de localização.
 - Os ZIPs continuam sendo código-fonte: é necessário compilar/gravar o firmware e
-  gerar/instalar um novo APK. Não há nova biblioteca Arduino nem sensor adicional.
+  gerar/instalar um novo APK. O firmware agora usa a biblioteca Arduino
+  `XPT2046_Touchscreen` para o touch já integrado à placa; não é necessário sensor
+  externo.
 
 ## Requisitos
 

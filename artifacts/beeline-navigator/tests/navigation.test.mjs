@@ -68,12 +68,10 @@ test('keeps the firmware navigation JSON contract and byte limit', () => {
   assert.ok(Buffer.byteLength(command, 'utf8') <= 180);
 });
 
-test('forwards contextual guidance without inventing a turn or maneuver distance', () => {
+test('forwards text guidance while keeping destination summary separate', () => {
   for (const fields of [
     { text: 'em direcao a R. Exemplo\n13min 4,3 km chegada 11:20' },
-    { title: '0 m', text: 'em direção a R. Exemplo', subText: '13 min · 4,3 km · Chegada 11:20' },
     { bigText: 'em direção a R. Exemplo 13min 4,3 km chegada 11:20' },
-    { textLines: '0 m em direção a R. Exemplo\n13min 4,3 km chegada 11:20' },
   ]) {
     const turn = parseMapsInstruction(notification(fields));
     assert.equal(turn?.maneuver, 'text');
@@ -83,6 +81,23 @@ test('forwards contextual guidance without inventing a turn or maneuver distance
     assert.equal(wire.maneuver, 'text');
     assert.equal(wire.road, 'em direcao a R. Exemplo');
     assert.ok(!Object.hasOwn(wire, 'distanceMeters'));
+    assert.ok(!JSON.stringify(wire).includes('4,3'));
+  }
+});
+
+test('contextual text shows only an explicitly associated distance', () => {
+  for (const [fields, distanceMeters] of [
+    [{ text: '250 m · em direção a R. Exemplo · 13 min · 4,3 km · Chegada 11:20' }, 250],
+    [{ title: '0 m', text: 'em direção a R. Exemplo', subText: '13 min · 4,3 km · Chegada 11:20' }, 0],
+    [{ text: '0,4 km em direção a R. Exemplo · 13 min · 4,3 km' }, 400],
+    [{ textLines: '1,2 km · em direção a R. Exemplo\n13 min · 4,3 km' }, 1200],
+  ]) {
+    const turn = parseMapsInstruction(notification(fields));
+    assert.equal(turn?.maneuver, 'text');
+    assert.equal(turn?.distanceMeters, distanceMeters);
+    const wire = JSON.parse(makeNavigationCommand(turn, 42));
+    assert.equal(wire.distanceMeters, distanceMeters);
+    assert.equal(wire.road, 'em direcao a R. Exemplo');
     assert.ok(!JSON.stringify(wire).includes('4,3'));
   }
 });

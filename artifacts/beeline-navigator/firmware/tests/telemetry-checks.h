@@ -10,8 +10,15 @@ static void runTelemetryChecks() {
   assert(headingAvailable && currentHeading == 45);
   assert(routeAvailable && remainingMeters == 3900 && remainingDistanceText() == "3,9 km");
   assert(currentInstruction.road == "Intercalado" && speedAvailable);
-  assert(!display.circles.empty() && display.circles.back().color == COLOR_SPEED_MIDDLE);
-  assert(display.circles.back().x == 280 && display.circles.back().radius == 22);
+  assert(std::any_of(display.circles.begin(), display.circles.end(),
+      [](const auto& circle) {
+        return circle.radius > 20 && circle.color == COLOR_SPEED_MIDDLE;
+      }));
+  assert(std::any_of(display.circles.begin(), display.circles.end(),
+      [](const auto& circle) {
+        return circle.x == 280 && circle.y == 60 && circle.radius == 22 &&
+               circle.color == COLOR_SPEED_MIDDLE;
+      }));
   for (const auto& triangle : display.triangles) {
     if (triangle.x0 >= 240) assert(triangle.x1 >= 240 && triangle.x2 >= 240 &&
                                   triangle.x0 < 320 && triangle.x1 < 320 && triangle.x2 < 320);
