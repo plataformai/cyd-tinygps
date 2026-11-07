@@ -19,28 +19,28 @@ content_type = "image/png"
 id = "X6d5liqvopeFMUbBSZr5-"
 uri = "file://generated-artifacts/beeline-apk.zip"
 type = "unspecified"
-title = "Última versão do projeto BeeLine Android"
-description = "ZIP do projeto-fonte atualizado para gerar o APK. Não é um arquivo .apk compilado."
+title = "PetitGPS — projeto Android atualizado para gerar o APK"
+description = "Projeto-fonte atualizado com o nome PetitGPS e a correção de distância. Não é o APK compilado; gere uma nova build Android a partir deste ZIP."
 logical_id = "af290ce3-4f7d-4d9a-9714-32ad72ca0cdf"
-content_hash = "sha256:67172870fca631aff8294194c0e58ad4954f5d4ee413aeb986eed18717c57466"
-size = 1136699
-mtime_ms = 1794087056643
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/4519aced-e7bd-4e7c-a411-caa2673c8416"
-storage_version_token = "1794087712896414"
+content_hash = "sha256:056d96c6466f6ac55e96afe446875610bbdf9571cdf205c01df4949919f14418"
+size = 1137126
+mtime_ms = 1794091631399
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/04d4cc6e-49a0-4e6e-aa5a-ad52d0579d0a"
+storage_version_token = "1794091648278025"
 content_type = "application/octet-stream"
 
 [[outputs]]
 id = "pxa-ZW_NUGSwaTXNdmCqZ"
 uri = "file://generated-artifacts/beeline-firmware.zip"
 type = "unspecified"
-title = "Firmware BeeLine — pasta raiz beeline-esp32"
-description = "ZIP atualizado e validado. Ao extrair, a única pasta interna é beeline-esp32; não há diretório intermediário."
+title = "PetitGPS — pacote do firmware"
+description = "Firmware atualizado para ESP32-2432S028, com nome BLE PetitGPS-ESP32 e tela inicial PetitGPS."
 logical_id = "4d874922-3a75-4be6-aedf-726c4109f74b"
-content_hash = "sha256:be966299917886d0cb537f57d9853e5eda03e4222e4b75b0983bb09372dbfbf2"
-size = 27537
-mtime_ms = 1794089995387
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/7aaee175-5fba-4225-a1fc-24bc264b4a3c"
-storage_version_token = "1794090001910097"
+content_hash = "sha256:3909cb1002b9bba38b3ae59d440c2e5e99e1c76b6cbb5b5891ab3d235abc256f"
+size = 27552
+mtime_ms = 1794091496263
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/754e296a-9ba5-4fee-8fda-75ddf0b3804c"
+storage_version_token = "1794091535902267"
 content_type = "application/octet-stream"
 
 [[outputs]]

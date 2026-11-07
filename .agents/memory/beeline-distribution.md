@@ -1,9 +1,9 @@
 ---
-name: Distribuição Android BeeLine
+name: Distribuição Android PetitGPS
 description: Decisões do usuário sobre exportação independente e identidade do Android.
 ---
 
-O usuário escolheu exportar um projeto Android independente para download, sem retirar o app atual do monorepo ou perder o preview. O identificador confirmado para a distribuição independente é `app.beeline.navigator`.
+O usuário escolheu exportar um projeto Android independente para download, sem retirar o app atual do monorepo ou perder o preview. O identificador confirmado para a distribuição independente é `app.beeline.navigator`; o nome visível do app agora é PetitGPS.
 
 **Why:** O objetivo é facilitar builds externos sem depender dos catálogos e pacotes do workspace; a escolha explícita foi exportar, não desvincular o app existente.
 
@@ -19,7 +19,7 @@ O registry de pacotes do ambiente pode continuar sendo herdado mesmo ao instalar
 
 ## Contrato do ZIP para EAS
 
-O ZIP do BeeLine deve abrir diretamente na raiz do projeto Expo, sem uma pasta envoltória nem a raiz do monorepo. Não incluir `node_modules/`, `.expo/`, `android/`, `ios/`, `pnpm-lock.yaml`, `package-lock.json` ou `.npmrc`; o usuário cria o lockfile localmente ao executar `npm install`, antes dos checks Expo e da build EAS. Preservar o app original, o identificador `app.beeline.navigator` e a configuração de preview Android APK. Os passos completos e o comando gerador devem permanecer documentados junto ao exportador em `scripts/beeline-export/EXPORTACAO.md`.
+O ZIP do PetitGPS deve abrir diretamente na raiz do projeto Expo, sem uma pasta envoltória nem a raiz do monorepo. Não incluir `node_modules/`, `.expo/`, `android/`, `ios/`, `pnpm-lock.yaml`, `package-lock.json` ou `.npmrc`; o usuário cria o lockfile localmente ao executar `npm install`, antes dos checks Expo e da build EAS. Preservar o app original, o identificador `app.beeline.navigator` e a configuração de preview Android APK. Os passos completos e o comando gerador devem permanecer documentados junto ao exportador em `scripts/beeline-export/EXPORTACAO.md`.
 
 **Why:** o usuário pediu uma exportação EAS autocontida sem lockfiles, com instalação inicial via npm, e pediu que essas instruções permaneçam para futuras gerações do ZIP.
 

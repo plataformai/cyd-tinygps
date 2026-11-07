@@ -1,6 +1,6 @@
 ---
 name: Origem da orientação
-description: Escolha do usuário para o significado da bússola do BeeLine.
+description: Escolha do usuário para o significado da bússola do PetitGPS.
 ---
 
 A bússola representa a direção do deslocamento pelo GPS, não a direção física para a qual o celular aponta.

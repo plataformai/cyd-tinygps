@@ -1,5 +1,5 @@
 ---
-name: Diagnóstico físico BeeLine
+name: Diagnóstico físico PetitGPS
 description: Limites de conclusões sobre o display e alterações que exigem confirmação na placa.
 ---
 

@@ -67,8 +67,8 @@ static void runVisualChecks() {
       dayBands.push_back(rect.color);
   }
   assert(dayBands.size() == 3);
-  assert(dayBands[0] == COLOR_SPEED_HIGH && dayBands[1] == COLOR_AMBER &&
-         dayBands[2] == COLOR_SPEED_HIGH);
+  assert(dayBands[0] == COLOR_DAY_SPEED_IDLE && dayBands[1] == COLOR_AMBER &&
+         dayBands[2] == COLOR_DAY_SPEED_IDLE);
   assert(display.rectangles.back().color == COLOR_BLACK);
   dayMode = false;
   speedAvailable = false;

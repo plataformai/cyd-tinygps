@@ -10,7 +10,7 @@ pacotes-fonte, não binários compilados.
 
 ## Ajustes visuais e memória temporária do rumo
 
-- A tela de espera não mostra mais o título grande `BEELINE`. As duas mensagens
+- A tela de espera não mostra mais um título grande acima da mensagem. As duas mensagens
   ficam centralizadas como um bloco na região esquerda superior: primeiro
   `Aguardando instrucoes`, depois uma linha vazia e `Conecte pelo app Android`.
 - Na régua, somente a faixa da velocidade instantânea válida usa `COLOR_AMBER`:

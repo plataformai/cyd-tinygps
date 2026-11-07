@@ -91,7 +91,7 @@ export function parseMapsInstruction(notification: MapsNotification): Turn | nul
     null;
   const contextDistanceMeters = selectedDistance ? metersFromMatch(selectedDistance) : null;
   const context = contextPart
-    ?.replace(/^\d+(?:[.,]\d+)?\s*(?:m|km)\s*[,–-]?\s*/i, '')
+    ?.replace(/^\d+(?:[.,]\d+)?\s*(?:km|quil[oô]metros?|m|metros?)\s*[,–-]?\s*/i, '')
     ?.replace(contextSuffixDistance ? /[,–-]?\s*\d+(?:[.,]\d+)?\s*(?:km|quil[oô]metros?|m|metros?)\s*$/i : /$^/, '')
     ?.replace(/\s+\d+\s*(?:min(?:utos?)?|h(?:oras?)?)\b.*$/i, '')
     .replace(/\s+chegada\b.*$/i, '').trim();

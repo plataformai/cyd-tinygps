@@ -163,8 +163,8 @@ int main() {
     if (it->y == Layout::BAR_Y && it->height == Layout::BAR_HEIGHT) dayBands.push_back(it->color);
   }
   assert(dayBands.size() == 3);
-  assert(dayBands[0] == COLOR_SPEED_HIGH && dayBands[1] == COLOR_AMBER &&
-         dayBands[2] == COLOR_SPEED_HIGH);
+  assert(dayBands[0] == COLOR_DAY_SPEED_IDLE && dayBands[1] == COLOR_AMBER &&
+         dayBands[2] == COLOR_DAY_SPEED_IDLE);
   assert(std::none_of(display.textSamples.begin(), display.textSamples.end(),
       [](const auto& sample) { return sample.value == "VELOCIDADE"; }));
   assert(std::any_of(display.textSamples.begin(), display.textSamples.end(),

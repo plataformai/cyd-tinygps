@@ -8,7 +8,7 @@
 
 ## Decisões antes da implantação, não bloqueios desta análise
 1. Aprovar a manutenção de notificações como fonte inicial? Recomendação: sim, sem custo/integração de SDK nesta fase. Alternativa SDK/API exige decisão de produto e avaliação de termos.
-2. Aprovar mensagem não classificada em texto sem seta quando a notificação de navegação é identificável? Recomendação: sim; evitar confundir texto bruto com instrução normalizada pelo BeeLine.
+2. Aprovar mensagem não classificada em texto sem seta quando a notificação de navegação é identificável? Recomendação: sim; evitar confundir texto bruto com instrução normalizada pelo PetitGPS.
 3. Prazo de silêncio aceitável em reta longa? Proposta8s de TTL com renovações limitadas pela fonte; idade máxima inicial30s requer captura real antes de fixar.
 4. Eventos devem aparecer por quanto tempo e podem interromper manobra iminente? Proposta preservar a manobra e não tornar alerta informativo persistente; definir prioridade/tempo com o usuário.
 5. Aceitar exigir firmware v2 para textos/estados ricos? Recomendação: sim; firmware antigo não consegue clear/TTL/unknown seguro.

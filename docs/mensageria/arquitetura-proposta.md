@@ -42,7 +42,7 @@ Modelo interno separa `navigationState`, `maneuver`, `roadEvent`, `sourceHealth`
 Um texto “Na rotatória, pegue a 2ª saída” permite família e ordinal, **não** sentido CW/CCW. Manter `maneuverId=unknown` com família ROUNDABOUT e `exitOrdinal=2` se faltar enum específico; não escolher uma das20 variantes por Brasil presumido. O mesmo vale para retorno sem sentido.
 
 ### Mensagem textual e visuais existentes
-Mostrar texto publicamente capturado e sanitizado quando a instrução de navegação é identificável, mesmo que a manobra específica seja unknown; identificar “orientação não classificada”, sem seta. Não repassar notificações genéricas do Maps como navegação. Texto normalizado de catálogo é marcado como texto do BeeLine [C], não literal Google.
+Mostrar texto publicamente capturado e sanitizado quando a instrução de navegação é identificável, mesmo que a manobra específica seja unknown; identificar “orientação não classificada”, sem seta. Não repassar notificações genéricas do Maps como navegação. Texto normalizado de catálogo é marcado como texto do PetitGPS [C], não literal Google.
 
 Preservar os glifos atuais Android e a geometria atual ESP32 para reto, curvas comuns e leves corretamente classificadas. Manter/retorno podem reutilizar o desenho legado apenas com rótulo explícito e sem alegar representar a variante completa; nas combinações ambíguas, texto neutro. Não mapear rotatória, chegada ou evento a seta simples só porque inclui “direita”. A matriz visual especifica cobertura e lacunas.
 
