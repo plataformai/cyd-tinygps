@@ -52,11 +52,11 @@ int main() {
   int16_t mappedX, mappedY;
   assert(fitted.map(100, 100, 320, 240, mappedX, mappedY));
   assert(mappedX == 28 && mappedY == 34);
-  assert(fitted.map(4080, 4070, 320, 240, mappedX, mappedY));
+  assert(fitted.map(3974, 3625, 320, 240, mappedX, mappedY));
   assert(isThemeButtonHit(mappedX, mappedY));
-  assert(isThemeButtonHit(308, 234));
-  assert(!isThemeButtonHit(279, 234));
-  assert(!isThemeButtonHit(308, 213));
+  assert(isThemeButtonHit(297, 212));
+  assert(!isThemeButtonHit(278, 212));
+  assert(!isThemeButtonHit(297, 194));
   setup();
   assert(touchControllerReady && touchCalibrationActive);
   acceptTouchCalibrationPoint(TS_Point{100, 100, 700});
@@ -72,7 +72,19 @@ int main() {
   assert(advertisingConfig->serviceUUID == SERVICE_UUID);
   loop();
   assert(orientationCheckActive && display.fullDraws == 1);
-  assert(display.lastFillScreenColor == COLOR_BACKGROUND);
+  assert(display.lastFillScreenColor == COLOR_AMBER);
+  assert(std::any_of(display.textSamples.begin(), display.textSamples.end(),
+      [](const auto& sample) {
+        return sample.value == "TinyGPS" && sample.x == 160 && sample.y == 102 &&
+               sample.font == 4 && sample.color == COLOR_BLACK;
+      }));
+  assert(std::any_of(display.textSamples.begin(), display.textSamples.end(),
+      [](const auto& sample) {
+        return sample.value == "by Charles Beck Varani" && sample.x == 160 &&
+               sample.y == 141 && sample.font == 2 && sample.color == COLOR_BLACK;
+      }));
+  assert(std::none_of(display.textSamples.begin(), display.textSamples.end(),
+      [](const auto& sample) { return sample.value == "320 x 240"; }));
   write(R"({"type":"navigation","maneuver":"slight_right","distanceMeters":350,"road":"Rua Haddock Lobo","timestamp":1761600000000})");
   write(R"({"type":"speed","speedKmh":72.4,"valid":true,"timestamp":1761600000000})");
   tick(1199);
@@ -87,7 +99,7 @@ int main() {
   assert(currentInstruction.distanceAvailable);
   const std::vector<int> expected = {0, 20, 40, 50, 60, 80, 100, 120, 140};
   assert(display.graduations == expected);
-  const int scaleWidth = display.width() - Layout::SCALE_X - Layout::MARGIN;
+  const int scaleWidth = speedScaleWidth();
   const int mark50 = Layout::SCALE_X + scaleWidth * 50 / Layout::SCALE_MAX;
   const int mark100 = Layout::SCALE_X + scaleWidth * 100 / Layout::SCALE_MAX;
   const auto hasRectangle = [&](int x, int y, int width, int height, uint16_t color) {
@@ -104,7 +116,7 @@ int main() {
   assert(hasRectangle(mark50, Layout::BAR_Y, mark100 - mark50,
                       Layout::BAR_HEIGHT, COLOR_AMBER));
   assert(hasRectangle(mark100, Layout::BAR_Y,
-                      display.width() - Layout::MARGIN - mark100,
+                      Layout::SCALE_X + scaleWidth - mark100,
                       Layout::BAR_HEIGHT, COLOR_SPEED_HIGH));
   for (const int mark : {mark50, mark100}) {
     assert(std::any_of(display.verticalLines.begin(), display.verticalLines.end(),
@@ -124,7 +136,7 @@ int main() {
   fakeNow = 5000;
   lastTouchPollMs = 0;
   touchControllerReady = true;
-  touchController.point = {4080, 4070, 700};
+  touchController.point = {3974, 3625, 700};
   touchController.pressed = true;
   touchWasDown = false;
   dayMode = false;
@@ -258,7 +270,7 @@ int main() {
         rectangle.color == COLOR_BLACK;
     blackSpeedTrack |= rectangle.x == Layout::SCALE_X - Layout::SCALE_BACKING_PADDING &&
         rectangle.y == Layout::BAR_Y - Layout::SCALE_BACKING_PADDING &&
-        rectangle.width == display.width() - Layout::SCALE_X - Layout::MARGIN +
+        rectangle.width == speedScaleWidth() +
                                2 * Layout::SCALE_BACKING_PADDING &&
         rectangle.height == Layout::BAR_HEIGHT + 2 * Layout::SCALE_BACKING_PADDING &&
         rectangle.color == COLOR_BLACK;

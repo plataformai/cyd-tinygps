@@ -66,12 +66,18 @@ def main():
             font = ImageFont.truetype(str(FONTS / "DejaVuSans.ttf"), size)
             anchor = {0: "lt", 1: "mt", 2: "mm"}[datum]
             draw.text((x, y), text, font=font, fill=rgb565(color), anchor=anchor)
+    day_frame = next((frame for name, frame in frames if name.startswith("MODO DIA")), None)
+    if day_frame is None:
+        raise RuntimeError("The firmware trace did not include the daytime preview.")
+    day_frame.save(OUT / "beeline-dia-preview.png")
     sheet = Image.new("RGB", (1360, 1150), "#101318")
     draw = ImageDraw.Draw(sheet)
     title = ImageFont.truetype(str(FONTS / "DejaVuSans.ttf"), 24)
     caption = ImageFont.truetype(str(FONTS / "DejaVuSans.ttf"), 18)
     draw.text((24, 16), "ESP32 - proposta de exibicao (320 x 240)", font=title, fill="white")
     for i, (name, frame) in enumerate(frames):
+        if name.startswith("MODO DIA"):
+            continue
         x, y = 24 + (i % 2) * 668, 65 + (i // 2) * 530
         draw.text((x, y), name, font=caption, fill="#f6d742")
         sheet.paste(frame.resize((640, 480), Image.Resampling.NEAREST), (x, y + 30))
@@ -80,6 +86,7 @@ def main():
               font=caption, fill="#a8aeb5")
     sheet.save(OUT / "beeline-validacao-visual.png")
     print("Created generated-artifacts/beeline-validacao-visual.png")
+    print("Created generated-artifacts/beeline-dia-preview.png")
 
 
 if __name__ == "__main__":

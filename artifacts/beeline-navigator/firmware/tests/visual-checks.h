@@ -22,8 +22,8 @@ static void runVisualChecks() {
     drawSpeedPanel();
     int found = 0, bright = 0;
     const int starts[] = {Layout::SCALE_X,
-      Layout::SCALE_X + (display.width() - Layout::SCALE_X - Layout::MARGIN) * 50 / 140,
-      Layout::SCALE_X + (display.width() - Layout::SCALE_X - Layout::MARGIN) * 100 / 140};
+      Layout::SCALE_X + speedScaleWidth() * 50 / 140,
+      Layout::SCALE_X + speedScaleWidth() * 100 / 140};
     for (const auto& rect : display.rectangles) {
       if (rect.y == Layout::BAR_Y && rect.height == Layout::BAR_HEIGHT) {
         assert(rect.x == starts[found]);
@@ -33,6 +33,8 @@ static void runVisualChecks() {
       }
     }
     assert(found == 3 && bright == 1);
+    assert(Layout::SCALE_X + speedScaleWidth() + Layout::MARGIN +
+           Layout::SCALE_BUTTON_CLEARANCE == display.width());
     const auto& marker = display.rectangles.back();
     assert(marker.width == 2 && marker.color == COLOR_TEXT);
     assert(marker.y >= Layout::PANEL_TOP && marker.y + marker.height <= Layout::SCALE_LABEL_Y);

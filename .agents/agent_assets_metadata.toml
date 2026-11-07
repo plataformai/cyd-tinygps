@@ -34,13 +34,13 @@ id = "pxa-ZW_NUGSwaTXNdmCqZ"
 uri = "file://generated-artifacts/beeline-firmware.zip"
 type = "unspecified"
 title = "Última versão do firmware BeeLine"
-description = "Pacote atualizado para compilar e gravar na ESP32; inclui calibração do touch e alternância dia/noite."
+description = "ZIP atualizado para compilar e gravar na ESP32; inclui o splash TinyGPS e o novo layout da régua."
 logical_id = "4d874922-3a75-4be6-aedf-726c4109f74b"
-content_hash = "sha256:34e04047010a968110e64e0811ee79b9b539d37ea639f5b9ec6215cfdef1b6d5"
-size = 26655
-mtime_ms = 1794087069399
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/ca692d71-f2bc-4af7-8c5a-cb5c8d383753"
-storage_version_token = "1794087327728004"
+content_hash = "sha256:0d4957bcf1bc7a60ae2a9ae8f234a7c2091d45c7b5150ddc4744f43569d92e86"
+size = 26983
+mtime_ms = 1794088734527
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/8c934a93-4175-449e-9f92-56f3658eebf2"
+storage_version_token = "1794088759171393"
 content_type = "application/octet-stream"
 
 [[outputs]]
@@ -251,4 +251,18 @@ size = 51389
 mtime_ms = 1794061788659
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/508aba8a-81f1-4a84-a7df-948fc4115d8f/d568d1d9-1fb8-4cff-b424-c5a674ebfff6"
 storage_version_token = "1794061845253125"
+content_type = "image/png"
+
+[[outputs]]
+id = "ETYXGHH1MR07bPDUvTVMo"
+uri = "file://generated-artifacts/beeline-dia-preview.png"
+type = "image"
+title = "Prévia do firmware no modo dia"
+description = "Render de 320×240 usando as chamadas de desenho do firmware; mostra fundo branco, barra proporcionalmente reduzida, bússola e ícone de alternância."
+logical_id = "fa1d6da4-9629-4e40-8765-da055011d81a"
+content_hash = "sha256:cca6d2d733e81a236440b67da4068281fec4c224187c0c1fe93001dd606b3b95"
+size = 11368
+mtime_ms = 1794088734163
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/fa1d6da4-9629-4e40-8765-da055011d81a/3b2c4529-a6ec-4e11-9ef7-066f15a53936"
+storage_version_token = "1794088758586918"
 content_type = "image/png"

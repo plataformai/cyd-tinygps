@@ -54,20 +54,21 @@ constexpr int16_t MARGIN = 12;
 constexpr int16_t SCALE_X = 96;
 constexpr int16_t BAR_Y = 207;
 constexpr int16_t BAR_HEIGHT = 10;
+constexpr int16_t SCALE_BUTTON_CLEARANCE = 32;
 constexpr int16_t MARKER_WIDTH = 2, MARKER_TOP_OFFSET = 8;
 constexpr int16_t MARKER_TRIANGLE_HALF_WIDTH = 4, MARKER_TRIANGLE_HEIGHT = 6;
 constexpr int16_t SCALE_BACKING_PADDING = 4;
 constexpr int16_t SPEED_LABEL_X = 13, SPEED_LABEL_Y = 196;
 constexpr int16_t SPEED_VALUE_Y = 204, SPEED_UNIT_X = 15, SPEED_UNIT_Y = 232;
 constexpr int16_t SCALE_LABEL_Y = 222;
+constexpr int16_t THEME_BUTTON_CENTER_Y = BAR_Y + BAR_HEIGHT / 2;
+constexpr int16_t THEME_ICON_EDGE = 11, THEME_TOUCH_RADIUS = 17;
 constexpr uint16_t SCALE_MAX = 140, GREEN_LIMIT = 50, YELLOW_LIMIT = 100;
 constexpr uint16_t GRADUATIONS[] = {0, 20, 40, 50, 60, 80, 100, 120, 140};
 constexpr int16_t ICON_CENTER_Y = 81;
 constexpr int16_t DIRECTION_Y = 5, DISTANCE_Y = 137, ROAD_Y = 171;
 constexpr unsigned int ROAD_MAX_BYTES = 23, ROAD_PREFIX_BYTES = 20;
 constexpr int16_t TEXT_DISTANCE_Y = 143, TEXT_STATUS_Y = 175;
-constexpr int16_t THEME_BUTTON_CENTER_X = 308, THEME_BUTTON_CENTER_Y = 234;
-constexpr int16_t THEME_BUTTON_LEFT = 280, THEME_BUTTON_TOP = 214;
 constexpr int16_t CALIBRATION_TARGETS_X[] = {28, 292, 292};
 constexpr int16_t CALIBRATION_TARGETS_Y[] = {34, 34, 226};
 }
@@ -210,8 +211,11 @@ uint16_t highlightColor() {
 }
 
 bool isThemeButtonHit(int16_t x, int16_t y) {
-  return x >= Layout::THEME_BUTTON_LEFT && x < display.width() &&
-         y >= Layout::THEME_BUTTON_TOP && y < display.height();
+  const int16_t centerX = display.width() - Layout::MARGIN - Layout::THEME_ICON_EDGE;
+  const int16_t dx = x - centerX;
+  const int16_t dy = y - Layout::THEME_BUTTON_CENTER_Y;
+  return dx * dx + dy * dy <=
+         Layout::THEME_TOUCH_RADIUS * Layout::THEME_TOUCH_RADIUS;
 }
 
 void toggleDayNightMode() {
@@ -251,7 +255,7 @@ String remainingDistanceText() {
 }
 
 void drawThemeToggle() {
-  const int16_t cx = Layout::THEME_BUTTON_CENTER_X;
+  const int16_t cx = display.width() - Layout::MARGIN - Layout::THEME_ICON_EDGE;
   const int16_t cy = Layout::THEME_BUTTON_CENTER_Y;
   const uint16_t glyphColor = highlightColor();
   if (dayMode) {
@@ -474,12 +478,17 @@ int8_t speedBand(float kmh) {
   return 0;
 }
 
+int16_t speedScaleWidth() {
+  return display.width() - Layout::SCALE_X - Layout::MARGIN -
+         Layout::SCALE_BUTTON_CLEARANCE;
+}
+
 void drawSpeedPanel() {
   using namespace Layout;
   const int16_t width = display.width();
   const int16_t panelTop = PANEL_TOP;
   const int16_t scaleX = SCALE_X;
-  const int16_t scaleWidth = width - scaleX - MARGIN;
+  const int16_t scaleWidth = speedScaleWidth();
   const int16_t barY = BAR_Y;
   const int16_t barHeight = BAR_HEIGHT;
 
@@ -541,6 +550,15 @@ void drawOrientationCheck(bool rotationTest) {
   const int16_t height = display.height();
   const bool landscape = width == DISPLAY_LANDSCAPE_WIDTH &&
                          height == DISPLAY_LANDSCAPE_HEIGHT;
+
+  if (!rotationTest) {
+    display.fillScreen(COLOR_AMBER);
+    display.setTextDatum(MC_DATUM);
+    display.setTextColor(COLOR_BLACK);
+    display.drawString("TinyGPS", width / 2, height / 2 - 18, 4);
+    display.drawString("by Charles Beck Varani", width / 2, height / 2 + 21, 2);
+    return;
+  }
 
   drawBackground();
   display.drawRect(0, 0, width, height, highlightColor());
@@ -806,7 +824,7 @@ String visibleRoad(const String& road) {
 }
 
 int16_t speedMarker(float kmh) {
-  return static_cast<int16_t>((display.width() - Layout::SCALE_X - Layout::MARGIN) *
+  return static_cast<int16_t>(speedScaleWidth() *
       constrain(kmh, 0.0f, float(Layout::SCALE_MAX)) / Layout::SCALE_MAX);
 }
 
