@@ -33,14 +33,14 @@ content_type = "application/octet-stream"
 id = "pxa-ZW_NUGSwaTXNdmCqZ"
 uri = "file://generated-artifacts/beeline-firmware.zip"
 type = "unspecified"
-title = "PetitGPS — pacote do firmware"
-description = "Firmware atualizado para ESP32-2432S028, com nome BLE PetitGPS-ESP32 e tela inicial PetitGPS."
+title = "PetitGPS — firmware com ícones de tema cinza"
+description = "ZIP atualizado para ESP32-2432S028: sol e lua ficam cinza nos dois temas; a alternância dia/noite e a régua de velocidade permanecem inalteradas."
 logical_id = "4d874922-3a75-4be6-aedf-726c4109f74b"
-content_hash = "sha256:3909cb1002b9bba38b3ae59d440c2e5e99e1c76b6cbb5b5891ab3d235abc256f"
-size = 27552
-mtime_ms = 1794091496263
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/754e296a-9ba5-4fee-8fda-75ddf0b3804c"
-storage_version_token = "1794091535902267"
+content_hash = "sha256:95a65f7c900ca331059f951bd3929f48a1fbaa4d3f39f891530706e4c023050b"
+size = 27595
+mtime_ms = 1794091879455
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/4d874922-3a75-4be6-aedf-726c4109f74b/7d514334-3682-4ec1-8ec2-df13e41cbafe"
+storage_version_token = "1794091889461515"
 content_type = "application/octet-stream"
 
 [[outputs]]

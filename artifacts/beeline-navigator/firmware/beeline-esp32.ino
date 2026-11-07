@@ -81,6 +81,7 @@ static constexpr uint16_t COLOR_AMBER = 0xF6A8;
 static constexpr uint16_t COLOR_DAY_BACKGROUND = 0xFFFF;
 static constexpr uint16_t COLOR_DAY_AMBER = 0x9B40;
 static constexpr uint16_t COLOR_DAY_SPEED_IDLE = 0xDEB4;
+static constexpr uint16_t COLOR_THEME_ICON_GRAY = 0x8410;
 static constexpr uint16_t COLOR_SPEED_MIDDLE = 0xB4A4;
 static constexpr uint16_t COLOR_SPEED_HIGH = 0x7B24;
 static constexpr uint16_t COLOR_TEXT = 0xFFFF;
@@ -260,7 +261,7 @@ String remainingDistanceText() {
 void drawThemeToggle() {
   const int16_t cx = display.width() - Layout::MARGIN - Layout::THEME_ICON_EDGE;
   const int16_t cy = Layout::THEME_BUTTON_CENTER_Y;
-  const uint16_t glyphColor = highlightColor();
+  const uint16_t glyphColor = COLOR_THEME_ICON_GRAY;
   if (dayMode) {
     // A crescent indicates that tapping will restore the night palette.
     display.fillCircle(cx, cy, 5, glyphColor);

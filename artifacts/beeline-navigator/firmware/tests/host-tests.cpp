@@ -145,6 +145,17 @@ int main() {
   touchController.pressed = true;
   touchWasDown = false;
   dayMode = false;
+  display.circles.clear();
+  drawThemeToggle();
+  assert(display.circles.size() == 1 &&
+         display.circles[0].color == COLOR_THEME_ICON_GRAY);
+  dayMode = true;
+  display.circles.clear();
+  drawThemeToggle();
+  assert(display.circles.size() == 2 &&
+         display.circles[0].color == COLOR_THEME_ICON_GRAY &&
+         display.circles[1].color == COLOR_DAY_BACKGROUND);
+  dayMode = false;
   pollTouchInput();
   assert(dayMode && screenDirty);
   assert(screenBackgroundColor() == COLOR_DAY_BACKGROUND);
