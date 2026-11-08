@@ -137,3 +137,40 @@ test('text guidance respects BLE bytes, handles accents and truncates with an el
   assert.equal(parseMapsInstruction(notification({ text: 'em direção a' })), null);
   assert.equal(parseMapsInstruction(notification({ text: '13min 4,3 km chegada 11:20' })), null);
 });
+
+test('distance and road without maneuver are sent, not discarded or replaced by destination distance', () => {
+  for (const [distance, expected, destination] of [
+    ['5,6 km', 5600, '7,7 km'],
+    ['4,9 km', 4900, '7,0 km'],
+    ['950 m', 950, '1,5 km'],
+    ['0 m', 0, '1,5 km'],
+  ]) {
+    for (const fields of [
+      { title: distance, text: 'Al. Exemplo', subText: `13min · ${destination} · Chegada: 12:58` },
+      { text: `${distance} · Al. Exemplo · 13min · ${destination} · Chegada: 12:58` },
+    ]) {
+      const turn = parseMapsInstruction(notification(fields));
+      assert.equal(turn?.maneuver, 'text');
+      assert.equal(turn?.road, 'Al. Exemplo');
+      assert.equal(turn?.distanceMeters, expected);
+      const wire = JSON.parse(makeNavigationCommand(turn, 42));
+      assert.equal(wire.distanceMeters, expected);
+      assert.equal(wire.road, 'Al. Exemplo');
+    }
+  }
+});
+
+test('bare road names do not imply arrows or borrow journey distance', () => {
+  assert.equal(parseMapsInstruction(notification({
+    title: '100 m', text: 'Rua Direita', subText: '5min · 2 km · Chegada: 12:58',
+  }))?.maneuver, 'text');
+  assert.equal(parseMapsInstruction(notification({
+    text: 'Al. Exemplo', subText: '5min · 2 km · Chegada: 12:58',
+  }))?.distanceMeters, null);
+  assert.equal(parseMapsInstruction(notification({
+    text: '5min · 2 km · Chegada: 12:58',
+  })), null);
+  assert.equal(parseMapsInstruction(notification({
+    title: '100 m', text: 'Praça Exemplo', subText: '5min · 2 km',
+  }))?.distanceMeters, 100);
+});

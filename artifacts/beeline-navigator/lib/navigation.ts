@@ -95,7 +95,11 @@ export function parseMapsInstruction(notification: MapsNotification): Turn | nul
     ?.replace(contextSuffixDistance ? /[,–-]?\s*\d+(?:[.,]\d+)?\s*(?:km|quil[oô]metros?|m|metros?)\s*$/i : /$^/, '')
     ?.replace(/\s+\d+\s*(?:min(?:utos?)?|h(?:oras?)?)\b.*$/i, '')
     .replace(/\s+chegada\b.*$/i, '').trim();
-  const text = normalized(parts.filter(part => !isContext(part)).join(' · '));
+  // Maps can publish just "distance · road · journey summary", with the
+  // maneuver carried visually rather than in the text. Road names are not turns.
+  const isRoadName = (part: string) =>
+    /^(?:r\.|rua\b|av\.|avenida\b|al\.|alameda\b|praca\b|pca\.|rod\.|rodovia\b|estrada\b|travessa\b|largo\b)/.test(normalized(part));
+  const text = normalized(parts.filter(part => !isContext(part) && !isRoadName(part)).join(' · '));
   let maneuver: Turn['maneuver'] | null = null;
   if (/\b(retorno|retorne|retornar|faca meia-volta|faca o retorno|u-turn|make a u-turn)\b/.test(text)) {
     maneuver = 'uturn';
@@ -111,7 +115,33 @@ export function parseMapsInstruction(notification: MapsNotification): Turn | nul
     maneuver = 'straight';
   }
   if (!maneuver) {
-    if (!context) return null;
+    if (!context) {
+      // Do not forward ETA, remaining journey distance or unrelated Maps
+      // notifications as guidance. The route summary starts at its time marker.
+      const summaryIndex = parts.findIndex(part =>
+        /^(?:\d+\s*(?:min(?:utos?)?|h(?:oras?)?)\b|chegada\b|arrival\b)/.test(normalized(part)),
+      );
+      const guidanceParts = summaryIndex >= 0 ? parts.slice(0, summaryIndex) : parts;
+      for (let index = 0; index < guidanceParts.length; index++) {
+        const part = guidanceParts[index];
+        const distance = parseStandaloneDistance(part);
+        const following = guidanceParts[index + 1];
+        if (distance && following && !parseStandaloneDistance(following) &&
+            (isRoadName(following) || summaryIndex >= 0) &&
+            !/^(?:google maps|maps|navegacao|calculando|recalculando|procurando|voce chegou)\b/.test(normalized(following))) {
+          return {
+            maneuver: 'text',
+            label: maneuverLabels.text,
+            distanceMeters: metersFromMatch(distance),
+            road: following,
+          };
+        }
+      }
+      const road = guidanceParts.find(isRoadName);
+      return road ? {
+        maneuver: 'text', label: maneuverLabels.text, distanceMeters: null, road,
+      } : null;
+    }
     return {
       maneuver: 'text',
       label: maneuverLabels.text,

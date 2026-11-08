@@ -19,14 +19,14 @@ content_type = "image/png"
 id = "X6d5liqvopeFMUbBSZr5-"
 uri = "file://generated-artifacts/beeline-apk.zip"
 type = "unspecified"
-title = "PetitGPS — projeto Android atualizado para gerar o APK"
-description = "Projeto-fonte atualizado com o nome PetitGPS e a correção de distância. Não é o APK compilado; gere uma nova build Android a partir deste ZIP."
+title = "PetitGPS — pacote Android corrigido"
+description = "Código-fonte atualizado para gerar o APK. Corrige o envio de notificações com distância e nome de via, mesmo sem manobra textual reconhecida. Não é um APK compilado."
 logical_id = "af290ce3-4f7d-4d9a-9714-32ad72ca0cdf"
-content_hash = "sha256:056d96c6466f6ac55e96afe446875610bbdf9571cdf205c01df4949919f14418"
-size = 1137126
-mtime_ms = 1794091631399
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/04d4cc6e-49a0-4e6e-aa5a-ad52d0579d0a"
-storage_version_token = "1794091648278025"
+content_hash = "sha256:29294c178d3ec65c6a5b91a094c7cf2d4c405a132f293ca8fd62a362c59cb510"
+size = 1137630
+mtime_ms = 1794165473724
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/3f2e0bb9-01f3-45a7-a0de-c8c5917ea56a"
+storage_version_token = "1794165517277746"
 content_type = "application/octet-stream"
 
 [[outputs]]
