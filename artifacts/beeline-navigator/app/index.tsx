@@ -21,6 +21,7 @@ import { diagnosticTurn, getMapsNotificationText, makeNavigationCommand, parseMa
 import { makeSpeedCommand } from '@/lib/speed';
 import { gpsCourse, makeHeadingCommand, courseLabel, formatRemainingDistance } from '@/lib/heading';
 import { SPEED_TASK_NAME } from '@/lib/speed-task';
+import { MapsDiagnostic } from '@/components/MapsDiagnostic';
 
 function turnIcon(maneuver: Turn['maneuver']) {
   const icons: Record<Turn['maneuver'], keyof typeof MaterialCommunityIcons.glyphMap> = {
@@ -486,6 +487,7 @@ export default function HomeScreen() {
           </Pressable>
         )}
 
+        <MapsDiagnostic />
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>PREPARAÇÃO</Text>
           <Text style={[styles.progressText, { color: colors.mutedForeground }]}>{notificationEnabled ? '1 DE 2 · ATIVO' : '1 DE 2'}</Text>

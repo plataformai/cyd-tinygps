@@ -19,14 +19,14 @@ content_type = "image/png"
 id = "X6d5liqvopeFMUbBSZr5-"
 uri = "file://generated-artifacts/beeline-apk.zip"
 type = "unspecified"
-title = "PetitGPS — pacote Android corrigido"
-description = "Código-fonte atualizado para gerar o APK. Corrige o envio de notificações com distância e nome de via, mesmo sem manobra textual reconhecida. Não é um APK compilado."
+title = "PetitGPS — pacote Android com diagnóstico das setas"
+description = "Projeto atualizado para gerar um novo APK. Inclui captura local dos ícones e descrições da notificação do Maps, visualização das imagens candidatas e compartilhamento de relatório JSON. Não é um APK compilado."
 logical_id = "af290ce3-4f7d-4d9a-9714-32ad72ca0cdf"
-content_hash = "sha256:29294c178d3ec65c6a5b91a094c7cf2d4c405a132f293ca8fd62a362c59cb510"
-size = 1137630
-mtime_ms = 1794165473724
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/3f2e0bb9-01f3-45a7-a0de-c8c5917ea56a"
-storage_version_token = "1794165517277746"
+content_hash = "sha256:a27567102294dffd254abe5f9804d1d80be99246830feb1d2de6d4c1f50683d7"
+size = 1144577
+mtime_ms = 1794170512948
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/b262578a-f0bc-4d2b-8aed-85859cecd23a"
+storage_version_token = "1794170568331790"
 content_type = "application/octet-stream"
 
 [[outputs]]

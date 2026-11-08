@@ -223,6 +223,11 @@ class BeeLineAndroidModule : Module() {
       )
     }
 
+    AsyncFunction("captureMapsDiagnostic") {
+      // On demand only; never added to the BLE command stream or stored on disk.
+      BeeLineNotificationListenerService.captureDiagnostic().toString()
+    }.runOnQueue(expo.modules.kotlin.functions.Queues.MAIN)
+
     AsyncFunction("getRouteSummary") {
       val (meters, ttl) = currentRoute()
       mapOf("remainingMeters" to meters, "validUntil" to

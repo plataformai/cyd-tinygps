@@ -13,16 +13,31 @@ class BeeLineNotificationListenerService : NotificationListenerService() {
     private const val PREFS_NAME = "beeline_notifications"
     private const val LATEST_NOTIFICATION_KEY = "latest_maps_notification"
     private const val MAPS_PACKAGE = "com.google.android.apps.maps"
+    @Volatile private var instance: BeeLineNotificationListenerService? = null
+
+    fun captureDiagnostic(): JSONObject {
+      val service = instance ?: throw IllegalStateException("Leitor desconectado. Confira o acesso às notificações.")
+      val latest = service.activeMapsNotifications().maxByOrNull { it.postTime }
+        ?: throw IllegalStateException("Nenhuma notificação ativa do Maps. Inicie uma navegação.")
+      return MapsNotificationDiagnostic.capture(service, latest)
+    }
   }
 
   override fun onListenerConnected() {
     super.onListenerConnected()
+    instance = this
     refreshLatestMapsNotification()
   }
 
   override fun onListenerDisconnected() {
+    instance = null
     clearLatest()
     super.onListenerDisconnected()
+  }
+
+  override fun onDestroy() {
+    if (instance === this) instance = null
+    super.onDestroy()
   }
 
   override fun onNotificationPosted(sbn: StatusBarNotification) {
