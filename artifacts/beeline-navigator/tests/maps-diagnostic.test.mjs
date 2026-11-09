@@ -32,3 +32,25 @@ test('diagnostic capture is explicit and separate from navigation transport', ()
   assert.match(ui, /maps-diagnostic-clear/);
   assert.doesNotMatch(ui, /writeCommand|fetch\(|AsyncStorage|useEffect/);
 });
+
+test('only Maps navigation notifications feed guidance and arrow samples', () => {
+  const service = read(kotlin + 'BeeLineNotificationListenerService.kt');
+  assert.match(service, /CATEGORY_NAVIGATION/);
+  assert.match(service, /packageName != MAPS_PACKAGE \|\| !isNavigation\(sbn\)\) return/);
+  assert.match(service, /ArrowSamples\.record\(this, sbn\)/);
+  assert.match(service, /\.filter \{ isNavigation\(it\) \}/);
+  const summary = /\b\d+\s*(?:min|h)\b.*\b\d+(?:[.,]\d+)?\s*(?:km|m)\b/i;
+  assert.ok(summary.test('16min · 3,4 km · Chegada: 20:21'));
+  assert.ok(!summary.test('Fechado hoje'));
+  assert.ok(!summary.test('Aberto hoje: 11:00–14:30'));
+});
+
+test('arrow samples are bounded, in memory and never transported over BLE', () => {
+  const source = read(kotlin + 'ArrowSamples.kt');
+  assert.match(source, /MAX_SAMPLES = 30/);
+  assert.match(source, /getLargeIcon\(\)/);
+  assert.doesNotMatch(source, /SharedPreferences|FileOutputStream|writeCommand/);
+  const ui = read('components/MapsDiagnostic.tsx');
+  assert.match(ui, /Compartilhar setas coletadas\?/);
+  assert.match(ui, /clearArrowSamples/);
+});

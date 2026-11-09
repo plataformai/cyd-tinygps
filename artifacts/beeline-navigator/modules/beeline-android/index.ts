@@ -15,6 +15,8 @@ type BeeLineNativeModule = {
   openNotificationAccessSettings(): Promise<void>;
   getLatestNotification(): Promise<MapsNotification | null>;
   captureMapsDiagnostic(): Promise<string>;
+  getArrowSamples(): Promise<string>;
+  clearArrowSamples(): Promise<void>;
   getRouteSummary(): Promise<{ remainingMeters: number | null; validUntil: number }>;
   scanAndConnect(): Promise<void>;
   writeCommand(command: string): Promise<void>;
@@ -44,6 +46,8 @@ export const BeeLineAndroid = {
   openNotificationAccessSettings: () => requireAndroidModule().openNotificationAccessSettings(),
   getLatestNotification: () => requireAndroidModule().getLatestNotification(),
   captureMapsDiagnostic: () => requireAndroidModule().captureMapsDiagnostic(),
+  getArrowSamples: () => requireAndroidModule().getArrowSamples(),
+  clearArrowSamples: () => requireAndroidModule().clearArrowSamples(),
   getRouteSummary: () => requireAndroidModule().getRouteSummary(),
   scanAndConnect: () => requireAndroidModule().scanAndConnect(),
   writeCommand: (command: string) => requireAndroidModule().writeCommand(command),

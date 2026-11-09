@@ -18,6 +18,24 @@ Não é necessário alterar o firmware para usar o diagnóstico.
 6. Para outra situação, capture novamente. **Apagar captura desta tela** remove
    o diagnóstico da memória da tela. Não existe histórico de diagnósticos em disco.
 
+## Evidência de 2026-11-09 (Maps 26.45, Android 12)
+
+- A seta da manobra atual está no **largeIcon** da notificação de navegação
+  (seta branca sobre fundo transparente). O smallIcon é o logo de navegação.
+  Os layouts RemoteViews não são fornecidos.
+- O texto traz apenas "em direção a <via>" e o resumo em subText.
+- Alertas de local do Maps ("Fechado hoje") são notificações do mesmo pacote e
+  sobrescreviam a orientação. Agora só notificações de navegação são usadas:
+  categoria `navigation` ou resumo de rota (min + km/m) no texto.
+
+## Coleta de setas
+
+Durante a navegação, cada largeIcon diferente é guardado em memória (até 30,
+máscara 24 × 24 + PNG 48 × 48, contagem e último texto). Em **Setas coletadas
+na rota**: atualizar, compartilhar (com confirmação) ou apagar. Nada vai por BLE
+ou para disco. As amostras servirão para criar modelos de reconhecimento; até
+lá, a orientação continua em modo texto.
+
 ## Fontes e limites
 
 Consulta somente a notificação ativa mais recente do pacote oficial do Maps:

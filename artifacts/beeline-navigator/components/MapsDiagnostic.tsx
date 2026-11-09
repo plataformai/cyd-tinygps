@@ -14,7 +14,11 @@ type Diagnostic = {
   images: { source: string; uri: string }[];
   views: { source: string; description?: string; text?: string; available?: boolean }[];
   errors: string[];
+  category?: string | null;
+  navigation?: boolean;
 };
+
+type ArrowSample = { id: number; uri: string; count: number; lastText: string; mask: string };
 
 export function MapsDiagnostic() {
   const colors = useColors();
@@ -22,6 +26,30 @@ export function MapsDiagnostic() {
   const [busy, setBusy] = useState(false);
   const [report, setReport] = useState<Diagnostic | null>(null);
   const [error, setError] = useState('');
+  const [arrows, setArrows] = useState<{ raw: string; samples: ArrowSample[] } | null>(null);
+
+  async function loadArrows() {
+    setError('');
+    try {
+      const raw = await BeeLineAndroid.getArrowSamples();
+      setArrows({ raw, samples: JSON.parse(raw).samples ?? [] });
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Falha ao ler as setas coletadas.');
+    }
+  }
+
+  function shareArrows() {
+    if (!arrows) return;
+    Alert.alert('Compartilhar setas coletadas?',
+      'Inclui as imagens das setas e o último texto do Maps de cada uma, que pode conter vias. Só será enviado ao aplicativo que você escolher.',
+      [{ text: 'Cancelar', style: 'cancel' }, {
+        text: 'Compartilhar',
+        onPress: () => {
+          void Share.share({ title: 'Setas do Maps — PetitGPS', message: arrows.raw })
+            .catch(() => setError('Não foi possível abrir o compartilhamento. Você também pode enviar capturas desta tela.'));
+        },
+      }]);
+  }
 
   async function capture() {
     setBusy(true);
@@ -87,7 +115,8 @@ export function MapsDiagnostic() {
             <Text selectable style={{ color: colors.mutedForeground }}>
               Capturado: {new Date(report.capturedAt).toLocaleString()}{'\n'}
               Notificação: {new Date(report.postedAt).toLocaleString()}{'\n'}
-              Android API {report.androidApi} · Maps {report.mapsVersion}
+              Android API {report.androidApi} · Maps {report.mapsVersion}{'\n'}
+              Categoria: {report.category || '(nenhuma)'} · {report.navigation ? 'notificação de navegação' : 'não é a navegação (alerta de local ou outro)'}
             </Text>
             <Text style={[styles.title, { color: colors.foreground }]}>Campos de texto</Text>
             {Object.entries(report.fields).map(([key, value]) => <Text key={key} selectable style={{ color: colors.foreground }}>
@@ -114,6 +143,36 @@ export function MapsDiagnostic() {
             </Pressable>
             <Text style={{ color: colors.mutedForeground }}>Você também pode tirar prints das imagens e seus números nesta tela.</Text>
           </>}
+          <Text style={[styles.title, { color: colors.foreground }]}>Setas coletadas na rota</Text>
+          <Text style={{ color: colors.mutedForeground }}>
+            Durante a navegação, o PetitGPS guarda na memória cada seta diferente que o Maps mostra
+            (até 30). Faça um trajeto com curvas, rotatórias e retornos, depois toque em atualizar e compartilhe.
+            Serve para ensinar o app a reconhecer as setas; nada é enviado à ESP32.
+          </Text>
+          <Pressable testID="maps-arrows-load" accessibilityRole="button"
+            disabled={!BeeLineAndroid.available} onPress={() => void loadArrows()}
+            style={[styles.button, { backgroundColor: colors.secondary }]}>
+            <Text style={{ color: colors.foreground }}>Atualizar setas coletadas</Text>
+          </Pressable>
+          {arrows && !arrows.samples.length && <Text style={{ color: colors.mutedForeground }}>
+            Nenhuma seta coletada ainda. Inicie uma navegação com o PetitGPS instalado e o acesso às notificações ativo.
+          </Text>}
+          {arrows?.samples.map(sample => <View key={sample.id} style={styles.imageRow}>
+            <View style={[styles.arrowBox, { backgroundColor: colors.foreground, borderColor: colors.border }]}>
+              <Image source={{ uri: sample.uri }} style={styles.arrow} accessibilityLabel={`Seta ${sample.id}`} />
+            </View>
+            <Text selectable style={[styles.imageLabel, { color: colors.foreground }]}>
+              {sample.id}. vista {sample.count}× · {sample.lastText || '(sem texto)'}
+            </Text>
+          </View>)}
+          {!!arrows?.samples.length && <Pressable testID="maps-arrows-share" accessibilityRole="button" onPress={shareArrows}
+            style={[styles.button, { backgroundColor: colors.secondary }]}>
+            <Text style={{ color: colors.foreground }}>Compartilhar setas ({arrows.samples.length})</Text>
+          </Pressable>}
+          {!!arrows && <Pressable testID="maps-arrows-clear" accessibilityRole="button"
+            onPress={() => { void BeeLineAndroid.clearArrowSamples().then(() => setArrows(null)); }}>
+            <Text style={{ color: colors.primary }}>Apagar setas coletadas</Text>
+          </Pressable>}
           <Pressable testID="maps-diagnostic-clear" accessibilityRole="button" onPress={() => { setReport(null); setError(''); }}>
             <Text style={{ color: colors.primary }}>Apagar captura desta tela</Text>
           </Pressable>
@@ -134,4 +193,6 @@ const styles = StyleSheet.create({
   imageBox: { borderWidth: 1, borderRadius: 8 },
   image: { width: 96, height: 96 },
   imageLabel: { flex: 1 },
+  arrowBox: { borderWidth: 1, borderRadius: 8, padding: 6 },
+  arrow: { width: 48, height: 48 },
 });

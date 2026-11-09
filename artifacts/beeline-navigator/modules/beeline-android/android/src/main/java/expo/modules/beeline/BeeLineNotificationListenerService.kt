@@ -17,9 +17,25 @@ class BeeLineNotificationListenerService : NotificationListenerService() {
 
     fun captureDiagnostic(): JSONObject {
       val service = instance ?: throw IllegalStateException("Leitor desconectado. Confira o acesso às notificações.")
-      val latest = service.activeMapsNotifications().maxByOrNull { it.postTime }
+      // Prefer route guidance; place alerts ("Fechado hoje") are newer but unrelated.
+      val active = service.activeMapsNotifications()
+      val latest = (active.filter { isNavigation(it) }.maxByOrNull { it.postTime }
+        ?: active.maxByOrNull { it.postTime })
         ?: throw IllegalStateException("Nenhuma notificação ativa do Maps. Inicie uma navegação.")
       return MapsNotificationDiagnostic.capture(service, latest)
+        .put("navigation", isNavigation(latest))
+    }
+
+    private val routeSummary = Regex("""\b\d+\s*(?:min|h)\b.*\b\d+(?:[.,]\d+)?\s*(?:km|m)\b""", RegexOption.IGNORE_CASE)
+
+    /** Navigation guidance, not place/traffic alerts from the same package. */
+    fun isNavigation(sbn: StatusBarNotification): Boolean {
+      val notification = sbn.notification
+      if (notification.category == android.app.Notification.CATEGORY_NAVIGATION) return true
+      val extras = notification.extras
+      return listOf(android.app.Notification.EXTRA_SUB_TEXT, android.app.Notification.EXTRA_TEXT,
+          android.app.Notification.EXTRA_TITLE, android.app.Notification.EXTRA_BIG_TEXT)
+        .any { key -> extras.getCharSequence(key)?.let { routeSummary.containsMatchIn(it) } == true }
     }
   }
 
@@ -41,7 +57,8 @@ class BeeLineNotificationListenerService : NotificationListenerService() {
   }
 
   override fun onNotificationPosted(sbn: StatusBarNotification) {
-    if (sbn.packageName != MAPS_PACKAGE) return
+    if (sbn.packageName != MAPS_PACKAGE || !isNavigation(sbn)) return
+    ArrowSamples.record(this, sbn)
     saveMapsNotification(sbn)
   }
 
@@ -57,6 +74,7 @@ class BeeLineNotificationListenerService : NotificationListenerService() {
     if (!removedCurrent) return
 
     val replacement = activeMapsNotifications()
+      .filter { isNavigation(it) }
       .filterNot { it.key == sbn.key }
       .maxByOrNull { it.postTime }
     if (replacement != null) saveMapsNotification(replacement)
@@ -64,8 +82,7 @@ class BeeLineNotificationListenerService : NotificationListenerService() {
   }
 
   private fun refreshLatestMapsNotification() {
-    val latest = activeMapsNotifications().maxByOrNull { it.postTime }
-    val preferences = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+    val latest = activeMapsNotifications().filter { isNavigation(it) }.maxByOrNull { it.postTime }
     if (latest == null) {
       clearLatest()
     } else {

@@ -26,3 +26,9 @@ Fotos fornecidas em 2026-11-08 confirmam uma seta gráfica na própria notifica�
 **Why:** Não se trata apenas da diferença entre a tela de navegação do Maps e sua notificação. Repetir ajustes de palavras-chave não resolve informação disponível somente como gráfico.
 
 **How to apply:** Investigar a fonte gráfica exposta no Android real antes de prometer reconhecimento. Um ícone extraído pode ser o logo do Maps ou outra manobra; não atribuir significado só por estar disponível.
+
+Capturas de 2026-11-09 (Maps 26.45, Android 12) mostraram que a seta atual vem no largeIcon da notificação de navegação; RemoteViews ausentes e smallIcon é só o logo. Alertas de local do Maps ("Fechado hoje") chegam pelo mesmo pacote.
+
+**Why:** Fonte gráfica confirmada no aparelho; os alertas sobrescreviam a orientação.
+
+**How to apply:** Reconhecer setas por modelos construídos a partir de amostras reais do largeIcon coletadas pelo usuário; filtrar notificações que não são de navegação.

@@ -228,6 +228,10 @@ class BeeLineAndroidModule : Module() {
       BeeLineNotificationListenerService.captureDiagnostic().toString()
     }.runOnQueue(expo.modules.kotlin.functions.Queues.MAIN)
 
+    // Distinct Maps large icons seen during navigation; memory only, never BLE.
+    AsyncFunction("getArrowSamples") { ArrowSamples.export() }
+    AsyncFunction("clearArrowSamples") { ArrowSamples.clear() }
+
     AsyncFunction("getRouteSummary") {
       val (meters, ttl) = currentRoute()
       mapOf("remainingMeters" to meters, "validUntil" to
