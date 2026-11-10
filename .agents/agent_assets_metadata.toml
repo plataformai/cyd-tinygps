@@ -19,14 +19,14 @@ content_type = "image/png"
 id = "X6d5liqvopeFMUbBSZr5-"
 uri = "file://generated-artifacts/beeline-apk.zip"
 type = "unspecified"
-title = "PetitGPS Android — código-fonte para APK"
-description = "Filtra alertas de local do Maps e coleta as setas do largeIcon durante a navegação."
+title = "PetitGPS Android — pacote-fonte atualizado"
+description = "Inclui as correções recentes para filtrar alertas de locais do Maps e coletar imagens das setas de navegação. É o projeto para gerar o APK de teste; não é um APK compilado."
 logical_id = "af290ce3-4f7d-4d9a-9714-32ad72ca0cdf"
 content_hash = "sha256:fc69a4c8839b4d83bbe1b5d00c163693f418241074164720d9bec3a82c6d2781"
 size = 1148264
-mtime_ms = 1794265892177
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/33407f11-091e-4959-990e-a77675b3a286"
-storage_version_token = "1794265896911557"
+mtime_ms = 1794302559199
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:cbb07405-3e50-47af-a803-a8e5dd7f5d86/af290ce3-4f7d-4d9a-9714-32ad72ca0cdf/c4285e25-c29f-4672-8665-afdcc9e90e5e"
+storage_version_token = "1794302566381821"
 content_type = "application/octet-stream"
 
 [[outputs]]
